@@ -6,7 +6,7 @@
 
 import { connect, ref, onValue, get, set, serverTimestamp } from "./firebase.js";
 import { ROUNDS, TEAMS } from "./config.js";
-import { teamName, teamNumber, ranking, roundCfg, questionNumber, initials, TURNS_PER_ROUND } from "./game.js";
+import { teamName, ranking, roundCfg, questionNumber, initials, playersOf, turnsPerRound } from "./game.js";
 import { $, esc, toast, createLeaderboard, startCountdown, standings } from "./ui.js";
 import {
   choicesHTML, verdictHTML, questionTags, teamChip, modeCardsHTML,
@@ -279,7 +279,7 @@ function play(fb, team) {
     switch (live.phase) {
       case "ready":
         return panel(`
-          <p class="overline">Round ${live.round} · Question ${questionNumber(live.turnIndex)}</p>
+          <p class="overline">Round ${live.round} · Question ${questionNumber(live.turnIndex, live)}</p>
           <h1 class="title-xl your-turn">Your turn!</h1>
           <p class="lede">Press Ready when your team is set.</p>
           <button class="btn btn--gradient btn--xl big-btn" data-ready type="button" ${sending || sent("ready") ? "disabled" : ""}>
@@ -366,15 +366,18 @@ function play(fb, team) {
   }
 }
 
-// "You're up in 3 turns" helper for teams that are waiting.
+// "You're up in 3 turns" helper for teams that are waiting. A team that
+// joined after the start has no turns and only watches.
 function teamOrderIn(live, team) {
   if (live.status !== "running" && live.status !== "paused") return "";
-  const n = teamNumber(team) - 1;
+  const players = playersOf(live);
+  const n = players.indexOf(team);
+  if (n < 0) return "You joined after the start, so you're watching this game.";
   const cur = live.turnIndex ?? 0;
-  const teams = TEAMS.length;
+  const teams = players.length;
   let next = cur - (cur % teams) + n;
   if (next <= cur) next += teams;
-  if (next >= TURNS_PER_ROUND) return "";
+  if (next >= turnsPerRound(live)) return "";
   const away = next - cur;
   return away === 1 ? "You're up next!" : `You're up in ${away} turns.`;
 }

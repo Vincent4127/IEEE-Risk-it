@@ -1,7 +1,7 @@
 // Pieces of markup shared by the Main Display and the team screens.
 
 import { WHEEL, MODE_HINTS, MODE_LABELS, ALL_IN, ROUNDS, QUESTIONS_PER_TEAM } from "./config.js";
-import { roundCfg, teamName, teamNumber, letter, modeLabel, questionNumber, ranking, initials, TURNS_PER_ROUND } from "./game.js";
+import { roundCfg, teamName, teamNumber, letter, modeLabel, questionNumber, ranking, initials, turnsPerRound } from "./game.js";
 import { esc, fmtPoints, standings, medalSVG } from "./ui.js";
 
 export const DIFFICULTY_LABEL = { easy: "Easy", medium: "Medium", hard: "Hard", expert: "Expert" };
@@ -94,7 +94,7 @@ export function roundSummary(round) {
 }
 
 export function progressText(live) {
-  return `Round ${live.round} of ${ROUNDS.length} · Question ${questionNumber(live.turnIndex ?? 0)} of ${QUESTIONS_PER_TEAM} · Turn ${(live.turnIndex ?? 0) + 1}/${TURNS_PER_ROUND}`;
+  return `Round ${live.round} of ${ROUNDS.length} · Question ${questionNumber(live.turnIndex, live)} of ${QUESTIONS_PER_TEAM} · Turn ${(live.turnIndex ?? 0) + 1}/${turnsPerRound(live)}`;
 }
 
 // The top three on a podium: silver, gold, bronze from left to right.

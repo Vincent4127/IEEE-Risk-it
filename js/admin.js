@@ -91,9 +91,16 @@ function run(fb) {
 
   // ---------- Game controls ----------
 
+  // Only teams with a device signed in take turns. In demo mode with bots
+  // on, the bots play the rest, so every team takes part.
   $("#btnStart").addEventListener("click", () => {
     if (!bank.length) return toast("Upload the questions first.", "error");
-    tx((s) => G.startGame(s, fb.now()), "Game started");
+    const bots = fb.isDemo && localStorage.getItem("riskit.demo.bots") === "on";
+    const players = TEAMS.map((t) => t.id).filter((id) => bots || claims[id]);
+    if (!players.length) return toast("No team has joined yet. Teams join with their code first.", "error");
+    if (players.length < TEAMS.length && !confirm(
+      `Start with ${players.length} of ${TEAMS.length} teams? Only these take turns:\n\n${players.map(G.teamName).join(", ")}\n\nTeams that join later can watch but won't get turns.`)) return;
+    tx((s) => G.startGame(s, fb.now(), players), `Game started with ${players.length} ${players.length === 1 ? "team" : "teams"}`);
   });
   $("#btnPause").addEventListener("click", () => {
     if (live?.status === "paused") tx((s) => G.resume(s, fb.now()), "Game resumed");

@@ -22,10 +22,12 @@ export function toast(msg, kind = "") {
 
 export const fmtPoints = (p) => (p > 0 ? `+${p}` : `${p}`);
 
-// Teams with a device signed in, ranked by points. `roster` is the
-// { teamId: true } list the Main Display and Admin Panel keep up to date.
+// The teams on the leaderboard, ranked by points: in the lobby, those with a
+// device signed in (`roster`, kept by the Main Display and Admin Panel);
+// once the game starts, the teams taking turns.
 export function standings(live, roster) {
-  return ranking(live).filter((t) => roster?.[t.id]);
+  const inGame = live?.status !== "lobby" && live?.players?.length;
+  return ranking(live).filter((t) => (inGame ? live.players.includes(t.id) : roster?.[t.id]));
 }
 
 // A medal: two ribbon straps in IEEE blues over a metal disc with the place

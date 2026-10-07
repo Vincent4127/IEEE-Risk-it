@@ -8,7 +8,14 @@ import {
   WHEEL, ALL_IN, MODE_LABELS, tieBreak,
 } from "./config.js";
 
+// The most turns a round can have (every configured team playing).
 export const TURNS_PER_ROUND = TEAMS.length * QUESTIONS_PER_TEAM;
+
+// The teams taking turns in this game: the ones that had joined when the
+// game started, in team order. `players` is fixed at Start; a game saved
+// before it existed falls back to every team.
+export const playersOf = (s) => (s?.players?.length ? s.players : TEAMS.map((t) => t.id));
+export const turnsPerRound = (s) => playersOf(s).length * QUESTIONS_PER_TEAM;
 
 // ---------- Lookups ----------
 
@@ -16,8 +23,8 @@ export const roundCfg = (n) => ROUNDS[(n || 1) - 1];
 export const teamById = (id) => TEAMS.find((t) => t.id === id);
 export const teamName = (id) => teamById(id)?.name ?? id;
 export const teamNumber = (id) => TEAMS.findIndex((t) => t.id === id) + 1;
-export const teamForTurn = (turnIndex) => TEAMS[turnIndex % TEAMS.length];
-export const questionNumber = (turnIndex) => Math.floor(turnIndex / TEAMS.length) + 1;
+export const teamForTurn = (s) => playersOf(s)[(s.turnIndex ?? 0) % playersOf(s).length];
+export const questionNumber = (turnIndex, s) => Math.floor((turnIndex ?? 0) / playersOf(s).length) + 1;
 export const letter = (i) => "ABCDEFGH"[i];
 
 export function initials(name) {
@@ -54,9 +61,11 @@ const clear = (s) => {
   s.phaseEndsAt = null;
 };
 
-export function startGame(s, now) {
-  if (s.status !== "lobby") return;
+// `players`: ids of the teams that take turns (the joined ones).
+export function startGame(s, now, players) {
+  if (s.status !== "lobby" || !players?.length) return;
   Object.assign(s, initialLive());
+  s.players = TEAMS.map((t) => t.id).filter((id) => players.includes(id));
   s.status = "running";
   return toRoundIntro(s, now, 1);
 }
@@ -75,7 +84,7 @@ function toRoundIntro(s, now, round) {
 export function beginTurn(s) {
   clear(s);
   s.phase = "ready";
-  s.activeTeam = teamForTurn(s.turnIndex).id;
+  s.activeTeam = teamForTurn(s);
   s.turnId = newId();
   return s;
 }
@@ -173,7 +182,7 @@ export function nextTurn(s, now) {
   if (s.status === "finished" || s.status === "lobby") return;
   if (s.phase === "roundIntro") return beginTurn(s);
   s.turnIndex = (s.turnIndex ?? 0) + 1;
-  if (s.turnIndex >= TURNS_PER_ROUND) {
+  if (s.turnIndex >= turnsPerRound(s)) {
     if (s.round >= ROUNDS.length) {
       clear(s);
       s.status = "finished";

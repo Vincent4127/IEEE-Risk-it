@@ -1,9 +1,9 @@
 // Main Display (projector). Shows the game and runs the engine.
 
 import { connect, ref, onValue, set } from "./firebase.js";
-import { HOST_EMAIL, TEAMS, ROUNDS } from "./config.js";
+import { HOST_EMAIL, TEAMS, ROUNDS, QUESTIONS_PER_TEAM } from "./config.js";
 import { Engine } from "./engine.js";
-import { teamName, roundCfg, ranking, initials, questionNumber, TURNS_PER_ROUND } from "./game.js";
+import { teamName, roundCfg, ranking, initials, questionNumber, turnsPerRound } from "./game.js";
 import { $, esc, toast, createLeaderboard, startCountdown, hostLogin, standings } from "./ui.js";
 import {
   choicesHTML, verdictHTML, questionTags, teamChip, modeCardsHTML,
@@ -87,8 +87,8 @@ function run(fb) {
     }
     meta.innerHTML = `
       <span class="badge badge--on-dark">Round ${live.round} / ${ROUNDS.length}</span>
-      <span class="badge badge--on-dark">Question ${questionNumber(live.turnIndex ?? 0)} / ${TURNS_PER_ROUND / TEAMS.length}</span>
-      <span class="badge badge--on-dark">Turn ${(live.turnIndex ?? 0) + 1} / ${TURNS_PER_ROUND}</span>`;
+      <span class="badge badge--on-dark">Question ${questionNumber(live.turnIndex, live)} / ${QUESTIONS_PER_TEAM}</span>
+      <span class="badge badge--on-dark">Turn ${(live.turnIndex ?? 0) + 1} / ${turnsPerRound(live)}</span>`;
   }
 
   function view() {
@@ -99,7 +99,7 @@ function run(fb) {
           <div class="stage__center">
             <p class="overline stage__over">IEEE UOB Student Branch presents</p>
             <h1 class="title-xl">Risk It</h1>
-            <p class="lede">${ROUNDS.length} rounds · ${TEAMS.length} teams · every answer counts</p>
+            <p class="lede">${ROUNDS.length} rounds · ${Object.keys(claims).length} of ${TEAMS.length} teams joined · every answer counts</p>
             <ul class="joined">${TEAMS.map((t) => `
               <li class="joined__team ${claims[t.id] ? "joined__team--in" : ""}">
                 <span class="joined__dot"></span>${esc(t.name)}
