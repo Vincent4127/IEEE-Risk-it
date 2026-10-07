@@ -1,0 +1,52 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "live": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.email === 'host@riskit.game'"
+    },
+
+    "secret": {
+      ".read": "auth != null && auth.token.email === 'host@riskit.game'",
+      ".write": "auth != null && auth.token.email === 'host@riskit.game'"
+    },
+
+    "history": {
+      ".read": "auth != null && auth.token.email === 'host@riskit.game'",
+      ".write": "auth != null && auth.token.email === 'host@riskit.game'"
+    },
+
+    "engine": {
+      ".read": "auth != null && auth.token.email === 'host@riskit.game'",
+      ".write": "auth != null && auth.token.email === 'host@riskit.game'"
+    },
+
+    "codes": {
+      ".write": "auth != null && auth.token.email === 'host@riskit.game'",
+      "$code": {
+        ".read": "auth != null"
+      }
+    },
+
+    "claims": {
+      ".read": "auth != null && auth.token.email === 'host@riskit.game'",
+      ".write": "auth != null && auth.token.email === 'host@riskit.game'",
+      "$team": {
+        ".read": "auth != null && data.child('uid').val() === auth.uid",
+        ".write": "auth != null && newData.exists() && (!data.exists() || data.child('uid').val() === auth.uid) && newData.child('uid').val() === auth.uid && newData.child('code').isString() && root.child('codes').child(newData.child('code').val()).val() === $team"
+      }
+    },
+
+    "actions": {
+      ".read": "auth != null && auth.token.email === 'host@riskit.game'",
+      ".write": "auth != null && auth.token.email === 'host@riskit.game'",
+      "$team": {
+        ".read": "auth != null && root.child('claims').child($team).child('uid').val() === auth.uid",
+        ".write": "auth != null && root.child('claims').child($team).child('uid').val() === auth.uid && root.child('live/activeTeam').val() === $team && root.child('live/status').val() === 'running'",
+        ".validate": "newData.hasChildren(['type', 'turnId', 'at']) && newData.child('turnId').val() === root.child('live/turnId').val() && newData.child('at').val() === now && (newData.child('type').val() === 'ready' || newData.child('type').val() === 'mode' || newData.child('type').val() === 'answer')"
+      }
+    }
+  }
+}

@@ -1,0 +1,165 @@
+# Risk It
+
+A live quiz game for the IEEE UOB Student Branch. It's plain HTML, CSS and
+JavaScript, with Firebase Realtime Database keeping every screen in sync.
+The look (colours, Karla and Roboto fonts, buttons, cards and leaderboard)
+follows the IEEE UOB website.
+
+| Page | Who uses it |
+| --- | --- |
+| `display.html` | **Main Display** on the projector laptop. It also runs the game, so keep it open the whole time. |
+| `team.html` | **Team Screen** on each team's laptop. |
+| `admin.html` | **Admin Panel** for the game master: start, pause, skip, fix scores, codes, questions. |
+| `index.html` | A start page that links to the three above. |
+
+## Files
+
+```
+css/theme.css          colours, fonts and spacing from the IEEE UOB site
+css/components.css     buttons, cards, badges, forms, leaderboard, podium
+css/screens.css        layouts for the display, team and admin pages
+js/config.js           ALL game rules: teams, points, timers, wheel, All In, ties
+js/firebase-config.js  your Firebase keys (step 3)
+js/game.js             turn order, scoring, question drawing
+js/engine.js           runs the game automatically (on the Main Display)
+js/display.js, team.js, admin.js   one script per page
+js/views.js, ui.js, wheel.js       shared pieces
+questions/questions.json  300 sample test questions from Open Trivia DB (replace with the real ones)
+database.rules.json    database security rules (step 5)
+```
+
+## Try it now (demo mode, no setup)
+
+While `js/firebase-config.js` still has the `PASTE_HERE` placeholders, the
+game runs in **demo mode**: everything lives in your browser and syncs
+between its tabs. Nothing is shared with other computers.
+
+1. In this folder run `python -m http.server 8000`, then open
+   <http://localhost:8000/admin.html> and sign in (any password works).
+2. Click **Quick setup** to load the sample questions and make codes.
+3. Click **Open Main Display** and sign in there too.
+4. Click **Bots: off** to turn the bots on. They play for every team that
+   hasn't joined.
+5. To play a team yourself, click **Open a team screen** and type that team's
+   code from the Access codes table. Use `team.html?slot=2` and so on for
+   more teams.
+6. Back in the Admin Panel, click **Start game**.
+
+To start over, click **Reset game**. Once you paste real Firebase keys, demo
+mode turns off on its own.
+
+## One-time setup (about 5 minutes)
+
+1. Go to <https://console.firebase.google.com>, click **Add project**, name it
+   (for example `risk-it`). You can turn Google Analytics off.
+2. **Build → Realtime Database → Create database.** Pick a location close to
+   you (for example `europe-west1`) and choose **Start in locked mode**.
+3. **Project settings (gear icon) → Your apps → Web (`</>`)**. Register the app
+   (no hosting needed yet), then copy the values from `firebaseConfig` into
+   `js/firebase-config.js`. Make sure `databaseURL` is filled in.
+4. **Build → Authentication → Get started → Sign-in method.** Enable
+   **Anonymous** and **Email/Password**. Then open **Users → Add user**:
+   - Email: `host@riskit.game` (it doesn't need to be a real inbox)
+   - Password: choose one. This is the game master's password.
+
+   To use a different email, change `HOST_EMAIL` in `js/config.js` **and**
+   every `host@riskit.game` in `database.rules.json`.
+5. **Realtime Database → Rules.** Replace everything with the contents of
+   `database.rules.json` and click **Publish**.
+
+## Running it on your computer
+
+The pages use JavaScript modules, so they must be opened through a small
+local web server (double-clicking the HTML files won't work). In this folder:
+
+```
+python -m http.server 8000
+```
+
+Then open <http://localhost:8000>.
+
+**Testing all 9 teams in one browser:** open `team.html?slot=1`,
+`team.html?slot=2`, … `team.html?slot=9` in separate tabs. Each slot keeps
+its own login.
+
+## Before the event
+
+1. Open **Admin Panel** and sign in.
+2. **Question bank:** click **Upload file…** and pick your questions file (or
+   **Load sample questions** to test). The table shows how many questions
+   are left in each pool. Orange numbers mean fewer than 36 are left.
+3. **Access codes:** click **Generate codes**, then **Print cards**. Hand one
+   card to each team.
+4. Open **Main Display** on the projector laptop and sign in. Press F11 for
+   full screen. Keep this page open: it runs the game.
+5. Teams open `team.html` and type their code once. The laptop then stays
+   locked to that team, even after a refresh. The Main Display lobby shows who
+   has joined.
+6. In the Admin Panel, click **Start game**. Everything after that is
+   automatic.
+
+If a team needs to switch laptops, click **Release** next to their name in
+the Admin Panel. Their code then works on a new laptop.
+
+## Putting it online (optional)
+
+Firebase Hosting is free, and it's set up so the `questions/` folder is
+**not** uploaded (that file has the answers):
+
+```
+npm install -g firebase-tools
+firebase login
+firebase use --add        # pick your project
+firebase deploy
+```
+
+You get a link like `https://risk-it.web.app`. Online, upload the questions
+with **Upload file…** in the Admin Panel.
+
+Avoid GitHub Pages unless you remove `questions/questions.json` first, because
+GitHub Pages would publish the answers.
+
+## The question file
+
+```json
+{
+  "questions": [
+    {
+      "round": 2,
+      "pool": "normal",
+      "difficulty": "medium",
+      "text": "Which law relates voltage, current and resistance?",
+      "choices": ["Ohm's law", "Faraday's law", "Coulomb's law", "Lenz's law"],
+      "answer": "A"
+    }
+  ]
+}
+```
+
+- `round`: 1 to 4.
+- `pool`: `normal` for Round 1 and for Safe. For Risk, use the wheel segment
+  id from `js/config.js` (`double`, `triple`, `shield`, `jackpot`). For
+  All In, use `allin`.
+- `difficulty`: `easy`, `medium`, `hard` or `expert`. It sets the timer. If
+  you leave it out, the round's difficulty is used.
+- `answer`: a letter (`"A"` to `"D"`) or a number (0 to 3).
+- `id` is optional. Give one if you want to know exactly which question is which.
+
+If a pool runs out, the game takes a question from the same round's `normal`
+pool, then from any pool in that round. It never repeats a question. If a
+round is completely empty, the turn is skipped with 0 points.
+
+## Changing the rules
+
+Everything is in `js/config.js`: team names, points per round, timers per
+difficulty, how long the reveal and wheel screens stay up, wheel segments and
+their chances, All In points and the tie-break. Save the file and refresh
+the open pages.
+
+## Security
+
+- Team codes are only in the database, never in the code. A team can look up
+  a code only if it already knows it.
+- A team laptop can only press Ready, choose, or submit on its own turn.
+- Answers live in a part of the database only the game master's login can
+  read. Team laptops receive the correct answer only after the reveal.

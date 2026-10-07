@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#00629B">
+  <title>Risk It · Main Display</title>
+  <link rel="icon" href="assets/ieee-uob-logo.png">
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/screens.css">
+</head>
+<body class="screen-display">
+  <header class="app-header">
+    <div class="app-header__inner container container--wide">
+      <div class="brand">
+        <img class="brand__logo" src="assets/ieee-uob-logo.png" alt="IEEE UOB Student Branch">
+        <span class="brand__divider" aria-hidden="true"></span>
+        <span class="brand__title">Risk It</span>
+      </div>
+      <div class="header-meta" id="meta"></div>
+    </div>
+  </header>
+
+  <main class="display-main hero-bg" id="app">
+    <section class="stage" id="stage" aria-live="polite"></section>
+    <aside class="sidebar">
+      <div class="sidebar__head">
+        <h2 class="overline">Leaderboard</h2>
+      </div>
+      <ol class="lb" id="leaderboard"></ol>
+    </aside>
+  </main>
+
+  <div class="overlay hidden" id="paused">
+    <div class="card card--elevated card--pad-lg overlay__card">
+      <p class="overline" style="color:var(--color-brand)">Game paused</p>
+      <h2 class="h1">Hold on…</h2>
+      <p class="muted">The game master paused the game. It will continue shortly.</p>
+    </div>
+  </div>
+
+  <div class="owner-banner hidden" id="ownerBanner">
+    <span>Another Main Display is running the game. This one is view-only.</span>
+    <button class="btn btn--sm btn--inverse" id="takeOver" type="button">Take over</button>
+  </div>
+
+  <div class="login-wrap hero-bg hidden" id="login"></div>
+
+  <script type="module" src="js/display.js"></script>
+</body>
+</html>

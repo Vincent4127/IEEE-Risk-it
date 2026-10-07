@@ -1,0 +1,154 @@
+/* ==========================================================================
+   Theme: design tokens taken from the IEEE UOB Student Branch website
+   (ieee-website.ieeeuobwebsite.workers.dev). Values are copied as-is so the
+   game matches the site. Change colours here and every screen follows.
+   ========================================================================== */
+
+@import url("https://fonts.googleapis.com/css2?family=Karla:wght@400;700&family=Roboto:wght@400;500;700&display=swap");
+
+:root {
+  /* Palette */
+  --blue-50: #e3f3ff;
+  --blue-100: #c7e4fa;
+  --blue-200: #8fc8f2;
+  --blue-300: #4fa6e6;
+  --blue-400: #1085e4;
+  --blue-500: #016eb6;
+  --blue-600: #055394;
+  --blue-700: #234e92;
+  --blue-800: #1a3a6e;
+  --blue-900: #0f2547;
+  --blue-950: #08182f;
+  --blue-ieee: #00629b;
+  --indigo-500: #3a5396;
+  --violet-500: #7a64f2;
+  --gray-0: #fff;
+  --gray-25: #fafafa;
+  --gray-100: #f1f3f5;
+  --gray-200: #d4d4d4;
+  --gray-400: #9a9a9a;
+  --gray-600: #5e5e5e;
+  --gray-800: #3a3a3a;
+  --gray-900: #222;
+  --green-50: #e8f5ec;
+  --green-500: #137c3b;
+  --amber-50: #fff6e5;
+  --amber-500: #8a5a00;
+  --red-50: #fdece9;
+  --red-500: #c0341d;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Shape, shadow, motion */
+  --radius-xs: 4px;
+  --radius-md: 10px;
+  --radius-lg: 15px;
+  --radius-full: 999px;
+  --shadow-sm: 0 1px 2px #016eb614;
+  --shadow-md: 0 4px 12px #016eb61a;
+  --shadow-lg: 0 12px 32px #016eb624;
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+  --ease-out: cubic-bezier(.2, .8, .3, 1);
+
+  /* Semantic colours */
+  --color-brand: var(--blue-500);
+  --color-brand-hover: var(--blue-600);
+  --color-brand-active: var(--blue-700);
+  --color-brand-subtle: var(--blue-50);
+  --color-brand-muted: var(--blue-100);
+  --color-accent: var(--indigo-500);
+  --color-bg: var(--gray-0);
+  --color-bg-subtle: var(--gray-25);
+  --color-bg-muted: var(--gray-100);
+  --color-surface: var(--gray-0);
+  --color-text: var(--gray-900);
+  --color-text-muted: var(--gray-600);
+  --color-text-subtle: var(--gray-400);
+  --color-text-on-brand: var(--gray-0);
+  --color-border: var(--gray-200);
+  --color-border-strong: var(--gray-400);
+  --color-focus-ring: var(--blue-400);
+  --color-success: var(--green-500);
+  --color-success-bg: var(--green-50);
+  --color-warning: var(--amber-500);
+  --color-warning-bg: var(--amber-50);
+  --color-danger: var(--red-500);
+  --color-danger-bg: var(--red-50);
+
+  /* Dark "hero" surfaces (site header, hero and footer) */
+  --color-hero-bg: var(--blue-ieee);
+  --color-hero-text: var(--gray-0);
+  --color-hero-text-soft: var(--blue-50);
+  --color-hero-accent: var(--blue-100);
+  --color-nav-surface: #0a1628a3;
+  --color-nav-border: #ffffff1f;
+  --color-nav-glow: #1085e44d;
+  --color-surface-on-dark: hsla(0, 0%, 100%, .045);
+  --color-border-on-dark: #ffffff1f;
+  --color-border-on-dark-strong: #ffffff38;
+  --gradient-brand: linear-gradient(135deg, #1a8cec, #0b63b8);
+  --gradient-brand-hover: linear-gradient(135deg, #37a1f5, #0f72ce);
+
+  /* Podium medals (site Leaderboard) */
+  --gold: #85600a;
+  --gold-soft: #fff4d6;
+  --silver: #515b66;
+  --silver-soft: #eef1f4;
+  --bronze: #8b4513;
+  --bronze-soft: #fbebdd;
+
+  /* Type */
+  --font-display: "Karla", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-body: "Roboto", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-bold: 700;
+  --tracking-tight: -0.02em;
+  --tracking-wide: 0.08em;
+  --lh-normal: 1.6;
+
+  --header-height: 68px;
+  --control-height-lg: 52px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; }
+
+body {
+  -webkit-font-smoothing: antialiased;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: var(--lh-normal);
+  min-height: 100vh;
+}
+
+button, input, select, textarea { color: inherit; font: inherit; }
+button { background: none; border: none; cursor: pointer; padding: 0; }
+img, svg { display: block; max-width: 100%; }
+
+:focus-visible {
+  border-radius: var(--radius-xs);
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

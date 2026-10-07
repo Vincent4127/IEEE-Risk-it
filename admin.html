@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#00629B">
+  <title>Risk It · Admin</title>
+  <link rel="icon" href="assets/ieee-uob-logo.png">
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/screens.css">
+</head>
+<body class="screen-admin">
+  <header class="app-header">
+    <div class="app-header__inner container">
+      <div class="brand">
+        <img class="brand__logo" src="assets/ieee-uob-logo.png" alt="IEEE UOB Student Branch">
+        <span class="brand__divider" aria-hidden="true"></span>
+        <span class="brand__title">Risk It · Admin</span>
+      </div>
+      <div class="header-meta">
+        <span class="badge badge--on-dark" id="engineState">Main Display: checking…</span>
+        <button class="btn btn--sm btn--outline-light hidden" id="signOut" type="button">Sign out</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="admin-main" id="app">
+    <div class="container admin-grid hidden" id="panel">
+
+      <!-- Demo helpers (only in demo mode) -->
+      <section class="card card--filled card--pad-md admin-card admin-card--wide hidden" id="demoCard">
+        <div class="admin-card__head">
+          <div>
+            <p class="overline" style="color:var(--color-brand)">Demo mode</p>
+            <h2 class="h3">Test helpers</h2>
+            <p class="muted">Firebase isn't connected, so everything runs in this browser. Open the Main Display and team screens as tabs.
+              Bots play for every team that has no laptop joined. Keep this tab open while bots are on.</p>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn--primary" id="btnQuick" type="button">Quick setup</button>
+            <button class="btn btn--secondary" id="btnBots" type="button" aria-pressed="false">Bots: off</button>
+            <a class="btn btn--secondary" href="display.html" target="_blank">Open Main Display</a>
+            <a class="btn btn--secondary" href="team.html?slot=1" target="_blank">Open a team screen</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Game controls -->
+      <section class="card card--outlined card--pad-md admin-card admin-card--wide">
+        <div class="admin-card__head">
+          <div>
+            <p class="overline muted">Game</p>
+            <h2 class="h3" id="statusLine">Loading…</h2>
+            <p class="muted" id="progressLine"></p>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn--primary" id="btnStart" type="button">Start game</button>
+            <button class="btn btn--secondary" id="btnPause" type="button">Pause</button>
+            <button class="btn btn--secondary" id="btnSkip" type="button">Skip turn</button>
+            <button class="btn btn--danger" id="btnReset" type="button">Reset game</button>
+          </div>
+        </div>
+        <div id="nowPlaying" class="now-playing"></div>
+      </section>
+
+      <!-- Scores -->
+      <section class="card card--outlined card--pad-md admin-card">
+        <div class="admin-card__head">
+          <div>
+            <p class="overline muted">Scores</p>
+            <h2 class="h3">Fix a score</h2>
+          </div>
+        </div>
+        <table class="table" id="scores"></table>
+      </section>
+
+      <!-- Teams & codes -->
+      <section class="card card--outlined card--pad-md admin-card">
+        <div class="admin-card__head">
+          <div>
+            <p class="overline muted">Teams</p>
+            <h2 class="h3">Access codes</h2>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn--sm btn--secondary" id="btnPrint" type="button">Print cards</button>
+            <button class="btn btn--sm btn--primary" id="btnCodes" type="button">Generate codes</button>
+          </div>
+        </div>
+        <table class="table" id="codes"></table>
+      </section>
+
+      <!-- Question bank -->
+      <section class="card card--outlined card--pad-md admin-card admin-card--wide">
+        <div class="admin-card__head">
+          <div>
+            <p class="overline muted">Questions</p>
+            <h2 class="h3">Question bank</h2>
+            <p class="muted">Upload a <code>.json</code> question file. Answers are stored where only the game master can read them.</p>
+          </div>
+          <div class="btn-row">
+            <label class="btn btn--primary" for="bankFile">Upload file…</label>
+            <input class="hidden" type="file" id="bankFile" accept=".json,application/json">
+            <button class="btn btn--secondary" id="btnSample" type="button">Load sample questions</button>
+            <button class="btn btn--ghost" id="btnClearUsed" type="button">Mark all unused</button>
+          </div>
+        </div>
+        <div id="bank"></div>
+      </section>
+
+      <!-- History -->
+      <section class="card card--outlined card--pad-md admin-card admin-card--wide">
+        <p class="overline muted">History</p>
+        <ol class="history" id="history"></ol>
+      </section>
+    </div>
+    <div class="login-wrap" id="login"></div>
+  </main>
+
+  <div class="print-sheet" id="printSheet" aria-hidden="true"></div>
+
+  <script type="module" src="js/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#00629B">
+  <title>Risk It · IEEE UOB</title>
+  <link rel="icon" href="assets/ieee-uob-logo.png">
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/screens.css">
+  <style>
+    .home { display: flex; flex-direction: column; min-height: 100vh; }
+    .home__hero { align-items: center; display: flex; flex: 1; padding-block: var(--space-16); }
+    .home__copy { display: flex; flex-direction: column; gap: var(--space-6); }
+    .home__links { display: grid; gap: var(--space-4); grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: var(--space-6); }
+    .home__link { color: inherit; text-decoration: none; transition: box-shadow var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out); }
+    .home__link:hover { box-shadow: var(--shadow-lg); transform: translateY(-3px); }
+    .home__link .h3 { color: var(--blue-900); font-family: var(--font-display); }
+    .home__link .overline { color: var(--color-brand); }
+    @media (max-width: 760px) { .home__links { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body class="home">
+  <header class="app-header">
+    <div class="app-header__inner container">
+      <div class="brand">
+        <img class="brand__logo" src="assets/ieee-uob-logo.png" alt="IEEE UOB Student Branch">
+        <span class="brand__divider" aria-hidden="true"></span>
+        <span class="brand__title">Risk It</span>
+      </div>
+    </div>
+  </header>
+  <main class="home__hero hero-bg">
+    <div class="container home__copy">
+      <p class="overline" style="color:var(--color-hero-accent)">IEEE UOB Student Branch</p>
+      <h1 class="title-xl">Risk It</h1>
+      <p class="lede" style="max-width:40rem">A live quiz for 9 teams over 4 rounds. Play it safe, or spin the wheel and risk it.</p>
+      <nav class="home__links" aria-label="Screens">
+        <a class="card card--elevated card--pad-lg home__link" href="team.html">
+          <span class="overline">Teams</span>
+          <span class="h3">Team Screen</span>
+          <span class="muted">Enter your team code to join.</span>
+        </a>
+        <a class="card card--elevated card--pad-lg home__link" href="display.html">
+          <span class="overline">Projector</span>
+          <span class="h3">Main Display</span>
+          <span class="muted">Runs the game. Game master sign-in.</span>
+        </a>
+        <a class="card card--elevated card--pad-lg home__link" href="admin.html">
+          <span class="overline">Game master</span>
+          <span class="h3">Admin Panel</span>
+          <span class="muted">Start, pause, codes, scores, questions.</span>
+        </a>
+      </nav>
+    </div>
+  </main>
+</body>
+</html>
