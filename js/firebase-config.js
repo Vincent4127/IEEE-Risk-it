@@ -5,11 +5,11 @@
 // ============================================================================
 
 export const firebaseConfig = {
-  apiKey: "PASTE_HERE",
-  authDomain: "PASTE_HERE.firebaseapp.com",
-  databaseURL: "https://PASTE_HERE-default-rtdb.firebaseio.com",
-  projectId: "PASTE_HERE",
-  storageBucket: "PASTE_HERE.appspot.com",
-  messagingSenderId: "PASTE_HERE",
-  appId: "PASTE_HERE",
+  apiKey: "AIzaSyDn8QibXX3My6iXa5PRF4ssTvC5nDwrjB0",
+  authDomain: "ieee-risk-it.firebaseapp.com",
+  databaseURL: "https://ieee-risk-it-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "ieee-risk-it",
+  storageBucket: "ieee-risk-it.firebasestorage.app",
+  messagingSenderId: "945276221225",
+  appId: "1:945276221225:web:ecb869ba1d09ba6ea5a938",
 };
