@@ -27,22 +27,26 @@ export const TEAMS = [
 // Questions each team answers per round. 9 teams × 4 = 36 turns per round.
 export const QUESTIONS_PER_TEAM = 4;
 
-// Rounds. `base` = points for a correct answer, `wrong` = points for a wrong
-// answer, `timeout` = points when the timer runs out.
-// `choices` = what the team picks before the question ([] = no choice).
+// Rounds, from "Risk It - Scoring & Risk Wheel Weights" (the PDF).
+//   base     points for a correct answer
+//   wrong    points for a wrong answer; running out of time counts as wrong
+//   choices  what the team picks before the question ([] = no choice)
 export const ROUNDS = [
-  { number: 1, difficulty: "easy",   base: 1, wrong: 0, timeout: -1, choices: [] },
-  { number: 2, difficulty: "medium", base: 2, wrong: 0, timeout: -1, choices: ["safe", "risk"] },
-  { number: 3, difficulty: "hard",   base: 3, wrong: 0, timeout: -1, choices: ["safe", "risk"] },
-  { number: 4, difficulty: "expert", base: 4, wrong: 0, timeout: -1, choices: ["safe", "risk", "allin"] },
+  { number: 1, difficulty: "easy",   base: 1, wrong: 0, choices: [] },
+  { number: 2, difficulty: "medium", base: 1, wrong: 0, choices: ["safe", "risk"] },
+  { number: 3, difficulty: "hard",   base: 1, wrong: 0, choices: ["safe", "risk"] },
+  { number: 4, difficulty: "expert", base: 1, wrong: 0, choices: ["normal", "allin"] },
 ];
 
-// TBD: seconds on the clock for each difficulty.
+// Seconds on the clock: by difficulty, then the Mystery Drink quick question
+// and the sudden-death tie-break.
 export const TIMERS = {
   easy: 20,
   medium: 25,
   hard: 30,
   expert: 40,
+  drink: 10,
+  tiebreak: 30,
 };
 
 // How long (seconds) the automatic screens stay up.
@@ -57,78 +61,55 @@ export const DURATIONS = {
 export const ANSWER_GRACE_MS = 1500;
 
 // ----------------------------------------------------------------------------
-//  TBD: THE WHEEL (Risk mode)
+//  THE RISK WHEEL (Rounds 2 and 3)
 //  Each segment:
-//    id      also the question pool it draws from (questions with this "pool")
-//    label   shown on the wheel
-//    weight  relative chance (they don't need to add up to 100)
-//    correct / wrong / timeout: points, given the round's base points
-//    and the team's current score.
+//    id, label, emoji  shown on the wheel and the screens
+//    weight            chance in % (they don't need to add up to 100)
+//    color, ink        slice colour, by how risky it is (green safe, red
+//                      risky), and the text colour that reads on it
+//    kind              "question"  a normal question with these points
+//                      "steal"     pick a target team first, then a question
+//                      "drink"     the mystery drink, then a quick question
+//                                  from the "drink" pool (10 s)
+//                      "lucky"     points straight away, no question
+//    correct, wrong    points for the active team
+//    targetCorrect, targetWrong  points for the robbed team (Steal 2)
 // ----------------------------------------------------------------------------
 export const WHEEL = [
-  {
-    id: "double",
-    label: "Double Points",
-    weight: 35,
-    color: "#016eb6",
-    correct: (base) => base * 2,
-    wrong: (base) => -base,
-    timeout: (base) => -base,
-  },
-  {
-    id: "triple",
-    label: "Triple Points",
-    weight: 20,
-    color: "#3a5396",
-    correct: (base) => base * 3,
-    wrong: (base) => -base * 2,
-    timeout: (base) => -base * 2,
-  },
-  {
-    id: "shield",
-    label: "Shield",
-    weight: 30,
-    color: "#1085e4",
-    correct: (base) => base,
-    wrong: () => 0,
-    timeout: () => 0,
-  },
-  {
-    id: "jackpot",
-    label: "Jackpot ×5",
-    weight: 15,
-    color: "#0f2547",
-    correct: (base) => base * 5,
-    wrong: (base) => -base * 3,
-    timeout: (base) => -base * 3,
-  },
+  { id: "doubleornothing", label: "Double or Nothing", emoji: "🎲", weight: 30, color: "#dc2626", ink: "#ffffff",
+    kind: "question", correct: 2, wrong: -1 },
+  { id: "double", label: "Double", emoji: "⚡", weight: 20, color: "#84cc16", ink: "#1a2e05",
+    kind: "question", correct: 2, wrong: 0 },
+  { id: "steal", label: "Steal 2", emoji: "🏴‍☠️", weight: 25, color: "#f97316", ink: "#431407",
+    kind: "steal", correct: 2, wrong: 0, targetCorrect: -2, targetWrong: 1 },
+  { id: "drink", label: "Mystery Drink", emoji: "🧪", weight: 20, color: "#facc15", ink: "#422006",
+    kind: "drink", correct: 2, wrong: 0 },
+  { id: "lucky", label: "Lucky Point", emoji: "🍀", weight: 5, color: "#15803d", ink: "#ffffff",
+    kind: "lucky", correct: 1 },
 ];
 
-// TBD: All In rules (Round 4). Draws from the "allin" pool.
-export const ALL_IN = {
-  label: "All In",
-  correct: (base, score) => Math.max(score, base), // doubles your score
-  wrong: (base, score) => -Math.max(score, 0),     // lose everything
-  timeout: (base, score) => -Math.max(score, 0),
-};
+// Round 4: All In uses the same question as Normal.
+export const ALL_IN = { label: "All In", correct: 4, wrong: -4 };
 
-// Labels for the Safe / Risk / All In buttons.
+// The cards a team picks from, with their emoji.
 export const MODE_LABELS = {
-  normal: "Question",
+  question: "Question",
   safe: "Safe",
-  risk: "Risk",
+  risk: "Risk it",
+  normal: "Normal",
   allin: "All In",
 };
-
+export const MODE_EMOJI = { safe: "🛡️", risk: "🔥", normal: "🛡️", allin: "💰" };
 export const MODE_HINTS = {
-  safe: "Normal question, normal points",
-  risk: "Spin the wheel, play for more",
-  allin: "Bet your whole score",
+  safe: "Normal question, nothing to lose",
+  risk: "Spin the wheel before the question",
+  normal: "Same question, nothing to lose",
+  allin: "Same question, all or nothing",
 };
 
-// TBD: tie-break. Teams with equal scores are ordered by this function
-// (return a negative number if team a should rank above team b).
-// Default: more correct answers first, then team number.
+// Order within a shared place on the leaderboard (a tie for first is played
+// off in sudden death instead). Return a negative number if team a should be
+// listed above team b. Default: more correct answers first, then team number.
 export function tieBreak(a, b) {
   return (b.correct || 0) - (a.correct || 0) || a.index - b.index;
 }

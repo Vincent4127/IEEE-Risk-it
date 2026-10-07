@@ -1,6 +1,6 @@
 // Pieces of markup shared by the Main Display and the team screens.
 
-import { WHEEL, MODE_HINTS, MODE_LABELS, ALL_IN, ROUNDS, QUESTIONS_PER_TEAM } from "./config.js";
+import { WHEEL, MODE_HINTS, MODE_LABELS, MODE_EMOJI, ALL_IN, ROUNDS, QUESTIONS_PER_TEAM } from "./config.js";
 import { roundCfg, teamName, teamNumber, letter, modeLabel, questionNumber, ranking, initials, turnsPerRound } from "./game.js";
 import { esc, fmtPoints, standings, medalSVG } from "./ui.js";
 
@@ -37,27 +37,38 @@ export function choicesHTML(question, { result = null, selected = null, interact
   }).join("")}</div>`;
 }
 
+// Correct / Wrong / Time's up / Lucky Point, with the points. On Steal 2 a
+// second line says what happened to the robbed team.
 export function verdictHTML(result) {
   if (!result) return "";
   const map = {
     correct: ["success", "Correct", "✅"],
     wrong: ["danger", "Wrong", "❌"],
     timeout: ["warning", "Time's up", "⏱"],
+    lucky: ["success", "Lucky Point", "🍀"],
     noquestion: ["neutral", "Turn skipped", "⏭"],
   };
   const [kind, label, icon] = map[result.outcome] || map.noquestion;
+  const unit = result.tiebreak ? "tie-break point" : "point";
+  const p = result.points ?? 0;
+  const steal = result.target && result.targetPoints
+    ? `<span class="verdict__steal">🏴‍☠️ ${esc(teamName(result.target))} ${fmtPoints(result.targetPoints)}</span>`
+    : "";
   return `
-    <div class="verdict verdict--${kind}">
-      <span class="verdict__icon" aria-hidden="true">${icon}</span>
-      <span class="verdict__label">${label}</span>
-      <span class="verdict__points">${fmtPoints(result.points ?? 0)} ${Math.abs(result.points) === 1 ? "point" : "points"}</span>
+    <div class="verdict-wrap">
+      <div class="verdict verdict--${kind}">
+        <span class="verdict__icon" aria-hidden="true">${icon}</span>
+        <span class="verdict__label">${label}</span>
+        <span class="verdict__points">${fmtPoints(p)} ${unit}${Math.abs(p) === 1 ? "" : "s"}</span>
+      </div>${steal}
     </div>`;
 }
 
 export function questionTags(live) {
   const q = live.question;
   const tags = [`<span class="badge badge--on-dark">${esc(modeLabel(live) || "Question")}</span>`];
-  if (q?.difficulty) tags.push(`<span class="badge badge--on-dark">${DIFFICULTY_LABEL[q.difficulty] ?? esc(q.difficulty)}</span>`);
+  if (live.target) tags.push(`<span class="badge badge--on-dark">🏴‍☠️ Robbing ${esc(teamName(live.target))}</span>`);
+  if (q?.difficulty && !live.tiebreak) tags.push(`<span class="badge badge--on-dark">${DIFFICULTY_LABEL[q.difficulty] ?? esc(q.difficulty)}</span>`);
   return tags.join("");
 }
 
@@ -65,18 +76,29 @@ export function teamChip(id, extra = "") {
   return `<span class="team-chip ${extra}"><span class="team-chip__num">${teamNumber(id)}</span><span class="team-chip__name">${esc(teamName(id))}</span></span>`;
 }
 
-// Safe / Risk / All In. With `stakes`, Safe also shows what a right answer
-// is worth; Risk and All In say nothing more, since the wheel decides.
-export function modeCardsHTML(round, { interactive = false, stakes = false } = {}) {
+// What each card is worth, shown with `stakes`. Risk it shows nothing more:
+// the wheel decides.
+function stakeText(round, m) {
   const base = roundCfg(round).base;
+  if (m === "safe" || m === "normal") return `+${base} if right`;
+  if (m === "allin") return `+${ALL_IN.correct} if right · ${ALL_IN.wrong} if wrong`;
+  return "";
+}
+
+// "Safe or Risk it?" / "Normal or All In?"
+export const choiceQuestion = (round) => `${roundCfg(round).choices.map((m) => MODE_LABELS[m]).join(" or ")}?`;
+
+// The choice cards: Safe 🛡️ / Risk it 🔥 (red) in Rounds 2 and 3, Normal 🛡️ /
+// All In 💰 (green) in Round 4.
+export function modeCardsHTML(round, { interactive = false, stakes = false } = {}) {
   return `<div class="modes">${roundCfg(round).choices.map((m) => {
     const tag = interactive ? "button" : "div";
     const attrs = interactive ? `type="button" data-mode="${m}"` : "";
-    const label = m === "allin" ? ALL_IN.label : MODE_LABELS[m];
-    const stake = stakes && m === "safe" ? `<span class="mode__stake">+${base} ${base === 1 ? "point" : "points"} if right</span>` : "";
+    const stake = stakes ? stakeText(round, m) : "";
     return `<${tag} class="mode mode--${m}" ${attrs}>
-        <span class="mode__label">${esc(label)}</span>
-        <span class="mode__hint">${esc(MODE_HINTS[m] || "")}</span>${stake}
+        <span class="mode__icon" aria-hidden="true">${MODE_EMOJI[m] ?? ""}</span>
+        <span class="mode__label">${esc(MODE_LABELS[m])}</span>
+        <span class="mode__hint">${esc(MODE_HINTS[m] || "")}</span>${stake ? `<span class="mode__stake">${esc(stake)}</span>` : ""}
       </${tag}>`;
   }).join("")}</div>`;
 }
@@ -84,7 +106,7 @@ export function modeCardsHTML(round, { interactive = false, stakes = false } = {
 export function roundSummary(round) {
   const r = roundCfg(round);
   const choice = r.choices.length
-    ? r.choices.map((m) => (m === "allin" ? ALL_IN.label : MODE_LABELS[m])).join(" / ")
+    ? r.choices.map((m) => `${MODE_EMOJI[m] ?? ""} ${MODE_LABELS[m]}`.trim()).join(" or ")
     : "Answer the question";
   return [
     `${DIFFICULTY_LABEL[r.difficulty]} questions`,
@@ -93,7 +115,22 @@ export function roundSummary(round) {
   ];
 }
 
+// The title card before sudden death, and before each extra cycle of it.
+export function tieIntro(live) {
+  const tb = live.tiebreak;
+  const names = tb.alive.map(teamName);
+  return {
+    over: tb.cycle > 1 ? `Still tied after cycle ${tb.cycle - 1}` : `Tied on ${live.scores?.[tb.alive[0]] ?? 0} points`,
+    title: "⚔️ Sudden death",
+    facts: [`${names.slice(0, -1).join(", ")} vs ${names[names.length - 1]}`, "One question each", "+1 tie-break point if right", "No wheel, no All In"],
+  };
+}
+
 export function progressText(live) {
+  if (live.tiebreak) {
+    const tb = live.tiebreak;
+    return `Sudden death · Cycle ${tb.cycle} · Team ${Math.min((tb.index ?? 0) + 1, tb.alive.length)} of ${tb.alive.length}`;
+  }
   return `Round ${live.round} of ${ROUNDS.length} · Question ${questionNumber(live.turnIndex, live)} of ${QUESTIONS_PER_TEAM} · Turn ${(live.turnIndex ?? 0) + 1}/${turnsPerRound(live)}`;
 }
 
@@ -109,21 +146,22 @@ export function podiumHTML(live, roster) {
         <div class="podium__person">
           <span class="podium__medal">${t.place <= 3 ? medalSVG(t.place) : ""}</span>
           <span class="podium__name">${esc(t.name)}</span>
-          <span class="podium__pts">${t.score} pts</span>
+          <span class="podium__pts">${t.score} pts${live.tiebreak?.tied?.includes(t.id) ? ` · ⚔️ ${t.tb}` : ""}</span>
         </div>
         <div class="podium__block">${t.place}</div>
       </li>`;
   }).join("")}</ol>`;
 }
 
-// "Volt wins!", or the shared winners when first place is a tie.
+// "🏆 Volt wins!", or the shared winners when sudden death couldn't settle it.
 export function winnerText(live, roster) {
   const top = standings(live, roster).filter((t) => t.place === 1).map((t) => t.name);
   if (!top.length) return "Game over";
-  if (top.length === 1) return `${top[0]} wins!`;
+  if (top.length === 1) return `🏆 ${top[0]} wins!`;
   return `It's a tie! ${top.slice(0, -1).join(", ")} and ${top[top.length - 1]} share first place`;
 }
 
 export function wheelResultLabel(live) {
-  return live.wheel ? WHEEL[live.wheel.segment]?.label : "";
+  const seg = live.wheel ? WHEEL[live.wheel.segment] : null;
+  return seg ? `${seg.emoji} ${seg.label}!` : "";
 }

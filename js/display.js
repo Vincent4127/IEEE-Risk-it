@@ -3,11 +3,12 @@
 import { connect, ref, onValue, set } from "./firebase.js";
 import { HOST_EMAIL, TEAMS, ROUNDS, QUESTIONS_PER_TEAM } from "./config.js";
 import { Engine } from "./engine.js";
-import { teamName, roundCfg, ranking, initials, questionNumber, turnsPerRound } from "./game.js";
+import { teamName, initials, questionNumber, turnsPerRound, playersOf } from "./game.js";
 import { $, esc, toast, createLeaderboard, startCountdown, hostLogin } from "./ui.js";
 import {
   choicesHTML, verdictHTML, questionTags, teamChip, modeCardsHTML,
   roundSummary, timerHTML, wheelResultLabel, podiumHTML, possessive, winnerText,
+  choiceQuestion, tieIntro,
 } from "./views.js";
 import { wheelSVG, spin } from "./wheel.js";
 import { sfx, soundButton } from "./sound.js";
@@ -128,14 +129,24 @@ function run(fb) {
       case "roundIntro": return sfx.round();
       case "ready": return sfx.turn();
       case "spinning": return sfx.spin(Math.max(1, ((live.phaseEndsAt ?? 0) - fb.now()) / 1000));
-      case "reveal": return ({ correct: sfx.correct, wrong: sfx.wrong, timeout: sfx.timeout })[live.result?.outcome]?.();
-      case "finished": return sfx.win();
+      case "target": case "drink": return sfx.turn();
+      case "reveal": return ({ correct: sfx.correct, lucky: sfx.correct, wrong: sfx.wrong, timeout: sfx.timeout })[live.result?.outcome]?.();
+      // The podium: a fanfare, then applause.
+      case "finished": sfx.win(); return sfx.applause();
     }
   }
 
   function renderMeta() {
     if (live.status === "lobby" || live.status === "finished") {
       meta.innerHTML = `<span class="badge badge--on-dark">${live.status === "lobby" ? "Starting soon" : "Final results"}</span>`;
+      return;
+    }
+    if (live.tiebreak) {
+      const tb = live.tiebreak;
+      meta.innerHTML = `
+        <span class="badge badge--on-dark">⚔️ Sudden death</span>
+        <span class="badge badge--on-dark">Cycle ${tb.cycle}</span>
+        <span class="badge badge--on-dark">Team ${Math.min((tb.index ?? 0) + 1, tb.alive.length)} / ${tb.alive.length}</span>`;
       return;
     }
     meta.innerHTML = `
@@ -168,6 +179,16 @@ function run(fb) {
           </div>`;
 
       case "roundIntro":
+        if (live.tiebreak) {
+          const t = tieIntro(live);
+          return `
+            <div class="stage__center">
+              <p class="overline stage__over">${esc(t.over)}</p>
+              <h1 class="title-xl">${t.title}</h1>
+              <ul class="facts">${t.facts.map((f) => `<li>${esc(f)}</li>`).join("")}</ul>
+              ${timerHTML()}
+            </div>`;
+        }
         return `
           <div class="stage__center">
             <p class="overline stage__over">Round ${live.round} of ${ROUNDS.length}</p>
@@ -188,7 +209,7 @@ function run(fb) {
         return `
           <div class="stage__center">
             ${teamChip(live.activeTeam)}
-            <h1 class="title-lg">${roundCfg(live.round).choices.includes("allin") ? "Safe, Risk or All In?" : "Safe or Risk?"}</h1>
+            <h1 class="title-lg">${esc(choiceQuestion(live.round))}</h1>
             <p class="lede">${name} is deciding<span class="dots"></span></p>
             ${modeCardsHTML(live.round)}
           </div>`;
@@ -202,8 +223,41 @@ function run(fb) {
             <p class="wheel-result" data-wheel-result>${esc(wheelResultLabel(live))}</p>
           </div>`;
 
+      // Steal 2: the team is picking who to rob.
+      case "target":
+        return `
+          <div class="stage__center">
+            ${teamChip(live.activeTeam)}
+            <p class="big-emoji" aria-hidden="true">🏴‍☠️</p>
+            <h1 class="title-lg">Steal 2!</h1>
+            <p class="lede">${name} is choosing who to rob<span class="dots"></span></p>
+            <ul class="targets">${playersOf(live).filter((id) => id !== live.activeTeam).map((id) => `
+              <li class="target"><span class="target__name">${esc(teamName(id))}</span><span class="target__pts">${live.scores?.[id] ?? 0} pts</span></li>`).join("")}</ul>
+            <p class="muted">Right answer: ${name} +2, the robbed team −2. Wrong: the robbed team +1.</p>
+          </div>`;
+
+      // Mystery Drink: waiting for the game master to confirm the drink.
+      case "drink":
+        return `
+          <div class="stage__center">
+            ${teamChip(live.activeTeam)}
+            <p class="big-emoji" aria-hidden="true">🧪</p>
+            <h1 class="title-lg">Mystery Drink!</h1>
+            <p class="lede">${name}, take the drink. Your quick question (10 seconds) starts when the game master confirms<span class="dots"></span></p>
+          </div>`;
+
       case "question":
       case "reveal":
+        if (live.result?.outcome === "lucky") {
+          return `
+            <div class="stage__center">
+              ${teamChip(live.activeTeam)}
+              <p class="big-emoji" aria-hidden="true">🍀</p>
+              <h1 class="title-lg">Lucky Point!</h1>
+              ${verdictHTML(live.result)}
+              <p class="lede">No question this time. On to the next team<span class="dots"></span></p>
+            </div>`;
+        }
         if (live.result?.outcome === "noquestion") {
           return `
             <div class="stage__center">

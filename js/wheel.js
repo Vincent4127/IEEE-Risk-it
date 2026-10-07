@@ -21,19 +21,35 @@ function point(angle, r) {
   return [100 + r * Math.cos(rad), 100 + r * Math.sin(rad)];
 }
 
+const EMOJI_FONT = `"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif`;
+
+// Each slice: its colour (green safe → red risky), a big emoji near the rim
+// and the name nearer the middle. Lucky Point's slice is too thin for words,
+// so it shows the emoji alone.
 export function wheelSVG() {
   const paths = slices.map((s) => {
     const [x1, y1] = point(s.start, 96);
     const [x2, y2] = point(s.end, 96);
     const large = s.end - s.start > 180 ? 1 : 0;
     const mid = (s.start + s.end) / 2;
-    const [tx, ty] = point(mid, 60);
+    const sweep = s.end - s.start;
     const turn = mid > 180 ? mid + 90 : mid - 90; // keep labels upright
+    const [ex, ey] = point(mid, sweep < 30 ? 70 : 78);
+    const [tx, ty] = point(mid, 44);
+    // Names of more than one word over ten letters go on two lines.
+    const words = s.label.split(" ");
+    const lines = s.label.length > 10 && words.length > 1
+      ? [words.slice(0, Math.ceil(words.length / 2)).join(" "), words.slice(Math.ceil(words.length / 2)).join(" ")]
+      : [s.label];
+    const label = sweep < 30 ? "" : `
+      <text x="${tx}" y="${ty}" transform="rotate(${turn} ${tx} ${ty})"
+        text-anchor="middle" dominant-baseline="middle" fill="${s.ink ?? "#fff"}"
+        font-family="Karla, sans-serif" font-weight="700" font-size="${lines.length > 1 ? 9.5 : 10.5}">${lines.map((l, i) =>
+          `<tspan x="${tx}" dy="${i === 0 ? (lines.length - 1) * -0.55 : 1.1}em">${l}</tspan>`).join("")}</text>`;
     return `
       <path d="M100 100 L${x1} ${y1} A96 96 0 ${large} 1 ${x2} ${y2} Z" fill="${s.color}" stroke="#fff" stroke-width="1.5"/>
-      <text x="${tx}" y="${ty}" transform="rotate(${turn} ${tx} ${ty})"
-        text-anchor="middle" dominant-baseline="middle" fill="#fff"
-        font-family="Karla, sans-serif" font-weight="700" font-size="${s.label.length > 12 ? 9 : 11}">${s.label}</text>`;
+      <text x="${ex}" y="${ey}" transform="rotate(${mid} ${ex} ${ey})" text-anchor="middle" dominant-baseline="central"
+        font-family='${EMOJI_FONT}' font-size="${sweep < 30 ? 13 : 17}">${s.emoji ?? ""}</text>${label}`;
   }).join("");
   return `
     <div class="wheel">

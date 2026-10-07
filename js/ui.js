@@ -1,7 +1,7 @@
 // Small UI helpers shared by the screens.
 
 import { GAME_TITLE, HOST_EMAIL } from "./config.js";
-import { ranking, initials } from "./game.js";
+import { ranking, initials, samePlace } from "./game.js";
 
 export const $ = (sel, root = document) => root.querySelector(sel);
 
@@ -35,7 +35,7 @@ export function standings(live, roster) {
   const rows = ranking(live).filter((t) => (inGame ? live.players.includes(t.id) : roster?.[t.id]));
   const scored = rows.some((t) => t.score !== 0);
   rows.forEach((t, i) => {
-    t.place = i > 0 && rows[i - 1].score === t.score ? rows[i - 1].place : i + 1;
+    t.place = i > 0 && samePlace(rows[i - 1], t) ? rows[i - 1].place : i + 1;
     t.medal = scored ? ["gold", "silver", "bronze"][t.place - 1] ?? "" : "";
   });
   return rows;

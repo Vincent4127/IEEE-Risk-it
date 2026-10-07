@@ -5,7 +5,7 @@
 import {
   connect, ref, onValue, set, update, remove, runTransaction, serverTimestamp,
 } from "./firebase.js";
-import { HOST_EMAIL, TEAMS, ROUNDS, WHEEL, QUESTIONS_PER_TEAM } from "./config.js";
+import { HOST_EMAIL, TEAMS, ROUNDS, QUESTIONS_PER_TEAM } from "./config.js";
 import { transactLive, logEvent } from "./engine.js";
 import * as G from "./game.js";
 import { $, esc, toast, hostLogin, fmtPoints } from "./ui.js";
@@ -163,16 +163,27 @@ function run(fb) {
     const q = live.question;
     const full = q && bank.find((b) => b.id === q.id);
     const phase = {
-      lobby: "Waiting to start", roundIntro: `Round ${live.round} title card`, ready: "Waiting for Ready",
-      choose: "Choosing Safe / Risk", spinning: "Wheel spinning", question: "Answering", reveal: "Showing the answer",
-      finished: "Game over",
+      lobby: "Waiting to start",
+      roundIntro: live.tiebreak ? "Sudden death title card" : `Round ${live.round} title card`,
+      ready: "Waiting for Ready",
+      choose: G.roundCfg(live.round).choices.includes("allin") ? "Choosing Normal / All In" : "Choosing Safe / Risk it",
+      spinning: "Wheel spinning",
+      target: "🏴‍☠️ Choosing who to rob",
+      drink: "🧪 Mystery drink: waiting for you",
+      question: "Answering", reveal: "Showing the answer",
+      finished: live.winner ? `Game over: ${G.teamName(live.winner)} won` : "Game over",
     }[live.phase] ?? live.phase;
+    const r = live.result;
+    const resultText = r
+      ? `${r.outcome} (${fmtPoints(r.points)}${r.target && r.targetPoints ? `, ${G.teamName(r.target)} ${fmtPoints(r.targetPoints)}` : ""})`
+      : live.target ? `Robbing ${G.teamName(live.target)}` : "—";
+    renderDrink();
     $("#nowPlaying").innerHTML = `
       <dl class="kv">
         <div><dt>Team</dt><dd>${live.activeTeam ? esc(G.teamName(live.activeTeam)) : "—"}</dd></div>
         <div><dt>Step</dt><dd>${esc(phase)}</dd></div>
         <div><dt>Mode</dt><dd>${esc(G.modeLabel(live) || "—")}</dd></div>
-        <div><dt>Result</dt><dd>${live.result ? `${esc(live.result.outcome)} (${fmtPoints(live.result.points)})` : "—"}</dd></div>
+        <div><dt>Result</dt><dd>${esc(resultText)}</dd></div>
       </dl>
       ${q ? `
         <div class="admin-q">
@@ -182,6 +193,41 @@ function run(fb) {
             `<li class="${full && full.answer === i ? "is-answer" : ""}">${G.letter(i)}. ${esc(c)}${full && full.answer === i ? " ✓" : ""}</li>`).join("")}</ol>
         </div>` : ""}`;
   }
+
+  // ---------- Mystery Drink ----------
+
+  // The dialog opens on its own while a team is on the Mystery Drink, and
+  // closes once the question is showing (from this panel or another one).
+  const drinkDialog = $("#drinkDialog");
+  drinkDialog.addEventListener("cancel", (e) => e.preventDefault()); // Esc doesn't dismiss it
+  function renderDrink() {
+    const waiting = live?.phase === "drink" && live.status === "running";
+    if (waiting) {
+      $("#drinkTeam").textContent = G.teamName(live.activeTeam);
+      $("#btnDrink").disabled = false;
+      if (!drinkDialog.open) drinkDialog.showModal();
+    } else if (drinkDialog.open) {
+      drinkDialog.close();
+    }
+  }
+  async function confirmDrink() {
+    if (live?.phase !== "drink") return;
+    $("#btnDrink").disabled = true;
+    const q = G.drawQuestion(bank, used, live.round, "drink");
+    const turnId = live.turnId;
+    try {
+      const next = await transactLive(db, (s) => G.confirmDrink(s, fb.now(), turnId, q));
+      if (next && q) {
+        set(ref(db, `secret/used/${q.id}`), true);
+        logEvent(db, `R${next.round} · ${G.teamName(next.activeTeam)} finished the mystery drink`);
+      }
+      if (!q) toast("No drink questions left, so the turn was skipped.", "error");
+    } catch (e) {
+      toast(e.message, "error");
+      $("#btnDrink").disabled = false;
+    }
+  }
+  $("#btnDrink").addEventListener("click", confirmDrink);
 
   // ---------- Scores ----------
 
@@ -350,8 +396,8 @@ function run(fb) {
       $("#bank").innerHTML = `<p class="empty">No questions uploaded yet.</p>`;
       return;
     }
-    const pools = ["normal", ...WHEEL.map((w) => w.id), "allin"];
-    const label = (p) => (p === "normal" ? "Normal (Safe)" : p === "allin" ? "All In" : WHEEL.find((w) => w.id === p)?.label ?? p);
+    const pools = ["normal", "drink"];
+    const label = (p) => (p === "normal" ? "Normal (every question)" : "🧪 Mystery Drink (quick)");
     const count = (r, p) => {
       const all = bank.filter((q) => q.round === r && q.pool === p);
       const left = all.filter((q) => !used[q.id]).length;
@@ -368,9 +414,10 @@ function run(fb) {
         <tbody>${pools.map((p) => `
           <tr><td>${esc(label(p))}</td>${ROUNDS.map((r) => {
             const c = count(r.number, p);
-            const relevant = p === "normal" || (p === "allin" ? r.choices.includes("allin") : r.choices.includes("risk"));
+            const relevant = p === "normal" || r.choices.includes("risk");
             if (!relevant && !c.all) return `<td class="num muted">·</td>`;
-            const warn = relevant && c.left < need;
+            // A drink comes up on about 1 spin in 5, so a few are enough.
+            const warn = relevant && c.left < (p === "drink" ? Math.ceil(need / 4) : need);
             return `<td class="num ${warn ? "warn" : ""}">${c.left} / ${c.all}</td>`;
           }).join("")}</tr>`).join("")}</tbody>
       </table></div>`;
@@ -405,20 +452,26 @@ function run(fb) {
     const bot = () => {
       const s = live;
       if (!botsOn || !s || s.status !== "running" || !s.activeTeam || claims[s.activeTeam]) return;
-      if (!["ready", "choose", "question"].includes(s.phase)) return;
+      if (!["ready", "choose", "target", "drink", "question"].includes(s.phase)) return;
       const key = `${s.turnId}:${s.phase}`;
       if (planned.has(key)) return;
       planned.add(key);
-      const delay = { ready: 1200, choose: 1500, question: 2500 + Math.random() * 3000 }[s.phase];
+      const delay = { ready: 1200, choose: 1500, target: 1500, drink: 2000, question: 2500 + Math.random() * 3000 }[s.phase];
       setTimeout(() => {
         const n = live;
         if (!n || n.turnId !== s.turnId || n.phase !== s.phase || n.status !== "running") {
           planned.delete(key);
           return bot();
         }
+        // The drink is confirmed here in the Admin Panel, as the game master would.
+        if (s.phase === "drink") return confirmDrink();
         let type = "ready";
         let value = null;
-        if (s.phase === "choose") {
+        if (s.phase === "target") {
+          const others = G.playersOf(s).filter((id) => id !== s.activeTeam);
+          type = "target";
+          value = others[Math.floor(Math.random() * others.length)];
+        } else if (s.phase === "choose") {
           const options = G.roundCfg(s.round).choices;
           type = "mode";
           value = options[Math.floor(Math.random() * options.length)];

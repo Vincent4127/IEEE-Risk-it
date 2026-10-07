@@ -11,6 +11,7 @@ import { $, esc, toast, createLeaderboard, startCountdown, standings } from "./u
 import {
   choicesHTML, verdictHTML, questionTags, teamChip, modeCardsHTML,
   roundSummary, timerHTML, wheelResultLabel, podiumHTML, possessive, winnerText,
+  tieIntro,
 } from "./views.js";
 import { wheelSVG, spin } from "./wheel.js";
 import { sfx, soundButton } from "./sound.js";
@@ -223,7 +224,7 @@ function play(fb, team) {
     switch (live.phase) {
       case "ready": return sfx.turn();
       case "spinning": return sfx.spin(Math.max(1, ((live.phaseEndsAt ?? 0) - fb.now()) / 1000));
-      case "reveal": return ({ correct: sfx.correct, wrong: sfx.wrong, timeout: sfx.timeout })[live.result?.outcome]?.();
+      case "reveal": return ({ correct: sfx.correct, lucky: sfx.correct, wrong: sfx.wrong, timeout: sfx.timeout })[live.result?.outcome]?.();
     }
   }
 
@@ -244,6 +245,15 @@ function play(fb, team) {
                 <span class="round-list__text">${roundSummary(rd.number).map(esc).join(" · ")}</span></li>`).join("")}
           </ol>`);
       case "roundIntro":
+        if (live.tiebreak) {
+          const t = tieIntro(live);
+          const inIt = live.tiebreak.alive.includes(team);
+          return panel(`
+            <p class="overline">${esc(t.over)}</p>
+            <h1 class="title-lg">${t.title}</h1>
+            <p class="lede">${inIt ? "You're in it: one question each, highest tie-break score wins." : "The tied teams play it off for first place."}</p>
+            <ul class="facts">${t.facts.map((f) => `<li>${esc(f)}</li>`).join("")}</ul>`);
+        }
         return panel(`
           <p class="overline">Round ${live.round} of ${ROUNDS.length}</p>
           <h1 class="title-lg">Round ${live.round}</h1>
@@ -276,9 +286,12 @@ function play(fb, team) {
         ${nextUp ? `<span class="next-up ${nextUp.startsWith("You're up next") ? "next-up--now" : ""}">${esc(nextUp)}</span>` : ""}
       </div>`;
     const upNext = nextUp.startsWith("You're up next");
-    const banner = upNext
-      ? `<div class="get-ready" role="status"><span class="get-ready__title">You're next. Get ready!</span><span class="get-ready__sub">Your turn starts as soon as ${esc(n)} finishes.</span></div>`
-      : "";
+    const robbed = live.target === team && (live.phase === "question" || live.phase === "reveal");
+    const banner = robbed
+      ? `<div class="get-ready get-ready--robbed" role="status"><span class="get-ready__title">🏴‍☠️ ${esc(n)} is robbing you!</span><span class="get-ready__sub">Right answer: you lose 2. Wrong: you get +1.</span></div>`
+      : upNext
+        ? `<div class="get-ready" role="status"><span class="get-ready__title">You're next. Get ready!</span><span class="get-ready__sub">Your turn starts as soon as ${esc(n)} finishes.</span></div>`
+        : "";
     let body = "";
     if (live.phase === "ready") {
       const me = myPlace();
@@ -295,6 +308,12 @@ function play(fb, team) {
       body = `
         <div class="wheel-wrap wheel-wrap--sm">${wheelSVG()}</div>
         <p class="wheel-result">${esc(wheelResultLabel(live))}</p>`;
+    } else if (live.phase === "target") {
+      body = `<div class="moment"><span class="big-emoji" aria-hidden="true">🏴‍☠️</span><p class="moment__title">Steal 2!</p><p class="moment__sub">${esc(n)} is choosing who to rob. It could be you.</p></div>`;
+    } else if (live.phase === "drink") {
+      body = `<div class="moment"><span class="big-emoji" aria-hidden="true">🧪</span><p class="moment__title">Mystery Drink!</p><p class="moment__sub">${esc(n)} is taking the drink.</p></div>`;
+    } else if (live.phase === "reveal" && live.result?.outcome === "lucky") {
+      body = `<div class="moment"><span class="big-emoji" aria-hidden="true">🍀</span><p class="moment__title">Lucky Point!</p><p class="moment__sub">${esc(n)} gets +1 with no question.</p></div>`;
     } else if ((live.phase === "question" || live.phase === "reveal") && live.question) {
       body = `
         <div class="qa qa--team qa--watch">
@@ -315,6 +334,8 @@ function play(fb, team) {
       ready: `Waiting for ${n} to get ready`,
       choose: `${n} is choosing`,
       spinning: `${n} is spinning the wheel`,
+      target: `${n} is choosing who to rob`,
+      drink: `${n} is taking the mystery drink`,
       question: `${n} is answering`,
       reveal: "Here's the answer",
     }[live.phase] || "Watch the main screen";
@@ -324,7 +345,7 @@ function play(fb, team) {
     switch (live.phase) {
       case "ready":
         return panel(`
-          <p class="overline">Round ${live.round} · Question ${questionNumber(live.turnIndex, live)}</p>
+          <p class="overline">${live.tiebreak ? `⚔️ Sudden death · Cycle ${live.tiebreak.cycle}` : `Round ${live.round} · Question ${questionNumber(live.turnIndex, live)}`}</p>
           <h1 class="title-xl your-turn">Your turn!</h1>
           <p class="lede">Press Ready when your team is set.</p>
           <button class="btn btn--gradient btn--xl big-btn" data-ready type="button" ${sending || sent("ready") ? "disabled" : ""}>
@@ -345,6 +366,28 @@ function play(fb, team) {
             <div class="wheel-wrap">${wheelSVG()}</div>
             <p class="wheel-result">${esc(wheelResultLabel(live))}</p>
           </div>`;
+      // Steal 2: pick any other playing team; they can go below zero.
+      case "target": {
+        const chosen = sent("target");
+        return `
+          <div class="decide">
+            <p class="big-emoji" aria-hidden="true">🏴‍☠️</p>
+            <h1 class="title-lg">Steal 2! Choose who to rob</h1>
+            <p class="lede decide__lede">Right answer: you +2, them −2. Wrong: they get +1.</p>
+            <div class="target-pick">${playersOf(live).filter((id) => id !== team).map((id) => `
+              <button class="target-btn ${chosen && action.value === id ? "is-chosen" : ""}" type="button" data-target="${id}" ${chosen || sending ? "disabled" : ""}>
+                <span class="target-btn__name">${esc(teamName(id))}</span>
+                <span class="target-btn__pts">${live.scores?.[id] ?? 0} pts</span>
+              </button>`).join("")}</div>
+            ${chosen ? `<p class="locked-in">Target locked: ${esc(teamName(action.value))}. Your question is coming!</p>` : ""}
+          </div>`;
+      }
+      case "drink":
+        return panel(`
+          <p class="big-emoji" aria-hidden="true">🧪</p>
+          <h1 class="title-lg">Mystery Drink!</h1>
+          <p class="lede">Take the drink. Your quick question (10 seconds) starts as soon as the game master confirms.</p>
+          <p class="drink-note">Right answer: +2 · Wrong: 0</p>`, "panel--active");
       case "question": {
         const done = sent("answer");
         const chosen = done ? Number(action.value) : selected;
@@ -362,6 +405,13 @@ function play(fb, team) {
           </div>`;
       }
       case "reveal":
+        if (live.result?.outcome === "lucky") {
+          return panel(`
+            <p class="big-emoji" aria-hidden="true">🍀</p>
+            <h1 class="title-lg">Lucky Point!</h1>
+            ${verdictHTML(live.result)}
+            <p class="lede">No question this time. The next team is up in a moment.</p>`, "panel--active");
+        }
         if (!live.question) {
           return panel(`
             ${verdictHTML(live.result)}
@@ -385,6 +435,8 @@ function play(fb, team) {
 
   function wire() {
     stage.querySelector("[data-ready]")?.addEventListener("click", () => send("ready"));
+    stage.querySelectorAll("[data-target]").forEach((b) =>
+      b.addEventListener("click", () => send("target", b.dataset.target)));
     stage.querySelectorAll("[data-mode]").forEach((b) =>
       b.addEventListener("click", () => send("mode", b.dataset.mode)));
     stage.querySelectorAll("[data-choice]").forEach((b) =>
@@ -416,6 +468,13 @@ function play(fb, team) {
 // joined after the start has no turns and only watches.
 function teamOrderIn(live, team) {
   if (live.status !== "running" && live.status !== "paused") return "";
+  if (live.tiebreak) {
+    const alive = live.tiebreak.alive;
+    const n = alive.indexOf(team);
+    if (n < 0) return "";
+    const away = n - (live.tiebreak.index ?? 0);
+    return away === 1 ? "You're up next!" : away > 1 ? `You're up in ${away} turns.` : "";
+  }
   const players = playersOf(live);
   const n = players.indexOf(team);
   if (n < 0) return "You joined after the start, so you're watching this game.";

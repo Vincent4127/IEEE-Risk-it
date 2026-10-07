@@ -115,9 +115,13 @@ export class Engine {
     return this.bank.find((q) => q.id === id)?.answer;
   }
 
+  // Sudden death takes any unused question, Round 4 first.
   draw(round, pool) {
-    const q = G.drawQuestion(this.bank, this.used, round, pool);
-    if (!q) this.onWarning(`No questions left for round ${round}. The turn was skipped.`);
+    const tie = !!this.live?.tiebreak;
+    const q = G.drawQuestion(this.bank, this.used, round, pool, { anyRound: tie });
+    if (!q) this.onWarning(tie
+      ? "No questions left for sudden death. The tied teams share first place."
+      : `No questions left for round ${round}. The turn was skipped.`);
     return q;
   }
 
@@ -134,8 +138,10 @@ export class Engine {
     if (!r) return;
     const name = G.teamName(s.activeTeam);
     const pts = r.points > 0 ? `+${r.points}` : `${r.points}`;
-    const what = { correct: "correct", wrong: "wrong", timeout: "ran out of time", noquestion: "skipped (no question left)" }[r.outcome];
-    logEvent(this.db, `R${s.round} · ${name} ${what} (${G.modeLabel(s) || "Question"}) ${pts}`);
+    const what = { correct: "correct", wrong: "wrong", timeout: "ran out of time", noquestion: "skipped (no question left)", lucky: "got a Lucky Point" }[r.outcome];
+    const robbed = r.target && r.targetPoints ? `, ${G.teamName(r.target)} ${r.targetPoints > 0 ? `+${r.targetPoints}` : r.targetPoints}` : "";
+    const where = s.tiebreak ? `Sudden death ${s.tiebreak.cycle}` : `R${s.round}`;
+    logEvent(this.db, `${where} · ${name} ${what} (${G.modeLabel(s) || "Question"}) ${pts}${robbed}`);
   }
 
   // Timed transitions.
@@ -149,7 +155,10 @@ export class Engine {
       case "roundIntro":
         return this.run((x) => (x.phase === "roundIntro" && x.status === "running" ? G.beginTurn(x) : undefined));
       case "spinning": {
-        const q = this.draw(s.round, G.poolFor(s.mode, s.wheel));
+        // Only Double or Nothing and Double need their question now: Steal 2
+        // waits for the target, Mystery Drink for the game master, and Lucky
+        // Point has none.
+        const q = G.segmentOf(s)?.kind === "question" ? this.draw(s.round, "normal") : null;
         return this.run((x) => G.finishSpin(x, now, s.turnId, q), (n) => this.afterQuestion(n));
       }
       case "question": {
@@ -164,6 +173,10 @@ export class Engine {
   afterQuestion(next) {
     this.markUsed(next);
     if (next.phase === "reveal") this.logReveal(next);
+    if (next.phase === "reveal" && next.result?.outcome === "noquestion" && next.tiebreak) {
+      // After this run has finished (run() ignores calls while busy).
+      setTimeout(() => this.run((x) => G.endTieUnsettled(x)), 0);
+    }
   }
 
   // Button presses from the active team.
@@ -178,7 +191,7 @@ export class Engine {
     const now = this.fb.now();
     if (a.type === "ready" && s.phase === "ready") {
       this.handled.add(key);
-      const q = G.roundCfg(s.round).choices.length === 0 ? this.draw(s.round, "normal") : null;
+      const q = G.asksStraightAway(s) ? this.draw(s.tiebreak ? 4 : s.round, "normal") : null;
       this.run((x) => G.pressReady(x, now, a.turnId, q), (n) => this.afterQuestion(n));
     } else if (a.type === "mode" && s.phase === "choose") {
       this.handled.add(key);
@@ -186,6 +199,13 @@ export class Engine {
       this.run((x) => G.chooseMode(x, now, a.turnId, a.value, pick), (n) => {
         this.afterQuestion(n);
         if (n.wheel) logEvent(this.db, `R${n.round} · ${G.teamName(n.activeTeam)} spun ${WHEEL[n.wheel.segment].label}`);
+      });
+    } else if (a.type === "target" && s.phase === "target") {
+      this.handled.add(key);
+      const q = this.draw(s.round, "normal");
+      this.run((x) => G.chooseTarget(x, now, a.turnId, String(a.value), q), (n) => {
+        this.afterQuestion(n);
+        logEvent(this.db, `R${n.round} · ${G.teamName(n.activeTeam)} is robbing ${G.teamName(n.target)}`);
       });
     } else if (a.type === "answer" && s.phase === "question") {
       this.handled.add(key);

@@ -50,7 +50,7 @@
       "$team": {
         ".read": "auth != null && root.child('claims').child($team).child('uid').val() === auth.uid",
         ".write": "auth != null && root.child('claims').child($team).child('uid').val() === auth.uid && root.child('live/activeTeam').val() === $team && root.child('live/status').val() === 'running'",
-        ".validate": "newData.hasChildren(['type', 'turnId', 'at']) && newData.child('turnId').val() === root.child('live/turnId').val() && newData.child('at').val() === now && (newData.child('type').val() === 'ready' || newData.child('type').val() === 'mode' || newData.child('type').val() === 'answer')"
+        ".validate": "newData.hasChildren(['type', 'turnId', 'at']) && newData.child('turnId').val() === root.child('live/turnId').val() && newData.child('at').val() === now && (newData.child('type').val() === 'ready' || newData.child('type').val() === 'mode' || newData.child('type').val() === 'answer' || newData.child('type').val() === 'target')"
       }
     }
   }

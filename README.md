@@ -105,6 +105,39 @@ its own login.
 If a team needs to switch devices, click **Release** next to their name in
 the Admin Panel. Their code then works on a new device.
 
+## During the game
+
+The scoring follows *Risk It - Scoring & Risk Wheel Weights*:
+
+| Round | Choice | Right | Wrong or no answer |
+| --- | --- | --- | --- |
+| 1 | none | +1 | 0 |
+| 2 and 3 | 🛡️ Safe | +1 | 0 |
+| 2 and 3 | 🔥 Risk it: spin the wheel first | see below | see below |
+| 4 | 🛡️ Normal | +1 | 0 |
+| 4 | 💰 All In (same question) | +4 | −4 |
+
+| Wheel | Chance | Right | Wrong or no answer |
+| --- | --- | --- | --- |
+| 🎲 Double or Nothing | 30% | +2 | −1 |
+| 🏴‍☠️ Steal 2 | 25% | +2, target −2 | target +1 |
+| ⚡ Double | 20% | +2 | 0 |
+| 🧪 Mystery Drink | 20% | +2 | 0 |
+| 🍀 Lucky Point | 5% | +1 at once, no question | |
+
+- **Steal 2:** the team picks any other playing team on its device before
+  the question. The target can go to zero or below.
+- **Mystery Drink:** a dialog opens on the **Admin Panel**. Hand over the
+  drink, then click **Drink done: show the question**. The quick question
+  (from the `drink` pool) has 10 seconds. Keep the Admin Panel open during
+  the game for this.
+- **A tie for first after Round 4:** sudden death between the tied teams
+  only. One question each per cycle, +1 tie-break point if right; after
+  each cycle only the teams with the most tie-break points stay in, until one
+  is left. No wheel and no All In.
+
+The points, chances and timers are all in `js/config.js`.
+
 ## Putting it online (optional)
 
 Firebase Hosting is free, and it's set up so the `questions/` folder is
@@ -146,9 +179,9 @@ GitHub Pages would publish the answers.
 ```
 
 - `round`: 1 to 4.
-- `pool`: `normal` for Round 1 and for Safe. For Risk, use the wheel segment
-  id from `js/config.js` (`double`, `triple`, `shield`, `jackpot`). For
-  All In, use `allin`.
+- `pool`: `normal` for every question in the round (Safe, Risk it, Normal and
+  All In all use it). Use `drink` for the short Mystery Drink questions
+  (Rounds 2 and 3, 10 seconds each).
 - `difficulty`: `easy`, `medium`, `hard` or `expert`. It sets the timer. If
   you leave it out, the round's difficulty is used.
 - `answer`: a letter (`"A"` to `"D"`) or a number (0 to 3).
@@ -156,7 +189,8 @@ GitHub Pages would publish the answers.
 
 If a pool runs out, the game takes a question from the same round's `normal`
 pool, then from any pool in that round. It never repeats a question. If a
-round is completely empty, the turn is skipped with 0 points.
+round is completely empty, the turn is skipped with 0 points. Sudden death
+uses unused Round 4 questions first, then anything left.
 
 ## Changing the rules
 

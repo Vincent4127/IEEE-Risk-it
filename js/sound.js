@@ -77,6 +77,36 @@ export const sfx = {
     }
     tone(1047, Math.max(0, seconds - 0.1), 0.35, { type: "triangle", gain: 0.16 });
   },
+  // A crowd clapping for about four seconds: short bursts of filtered noise
+  // at random moments, swelling in and fading out.
+  applause: (seconds = 4.5) => {
+    const a = audio();
+    if (!a || muted || a.state !== "running") return;
+    const len = Math.floor(a.sampleRate * 0.03);
+    const buf = a.createBuffer(1, len, a.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+    const out = a.createGain();
+    out.gain.value = 0.55;
+    out.connect(a.destination);
+    const claps = Math.round(seconds * 70);
+    for (let i = 0; i < claps; i++) {
+      const at = Math.random() * seconds;
+      // Louder in the first second, fading at the end.
+      const swell = Math.min(1, at / 0.8) * Math.min(1, (seconds - at) / 1.6);
+      const src = a.createBufferSource();
+      src.buffer = buf;
+      src.playbackRate.value = 0.8 + Math.random() * 0.5;
+      const band = a.createBiquadFilter();
+      band.type = "bandpass";
+      band.frequency.value = 900 + Math.random() * 1800;
+      band.Q.value = 0.9;
+      const g = a.createGain();
+      g.gain.value = (0.25 + Math.random() * 0.35) * swell;
+      src.connect(band).connect(g).connect(out);
+      src.start(a.currentTime + 0.35 + at);
+    }
+  },
   win: () => {
     notes([523, 659, 784], 0.14, { type: "triangle", gain: 0.16, length: 0.3 });
     notes([1047, 1047, 1319, 1568], 0.12, { type: "triangle", gain: 0.17, length: 0.5 });
