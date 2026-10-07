@@ -79,8 +79,10 @@ function run(fb) {
       ? items.map((h) => `<li><time>${new Date(h.at).toLocaleTimeString()}</time> ${esc(h.text)}</li>`).join("")
       : `<li class="muted">Nothing yet.</li>`;
   });
+  let engine = null;
   onValue(ref(db, "engine"), (s) => {
     const e = s.val();
+    engine = e;
     const el = $("#engineState");
     const fresh = () => e && fb.now() - (e.beat || 0) < 7000;
     const paint = () => {
@@ -125,6 +127,23 @@ function run(fb) {
     logEvent(db, "Game reset");
     toast("Game reset.");
   });
+
+  // The game moves on only while a Main Display is running it. When a timed
+  // step is overdue, say so here instead of leaving every screen frozen.
+  setInterval(() => {
+    const el = $("#stallLine");
+    const running = live?.status === "running";
+    const timed = ["roundIntro", "spinning", "question", "reveal"].includes(live?.phase);
+    const late = running && timed && live.phaseEndsAt && fb.now() - live.phaseEndsAt > 5000;
+    const noDisplay = running && !(engine && fb.now() - (engine.beat || 0) < 7000);
+    el.classList.toggle("hidden", !late && !noDisplay);
+    if (noDisplay) {
+      el.textContent = "The game is stopped: no Main Display is running it. Open display.html and sign in; the game continues from where it was.";
+    } else if (late) {
+      el.textContent = `The game is waiting for the Main Display (${Math.round((fb.now() - live.phaseEndsAt) / 1000)} s). `
+        + "Check its tab isn't showing a Reload banner, or press Skip turn to move on by hand.";
+    }
+  }, 1000);
 
   function renderGame() {
     if (!live) return;

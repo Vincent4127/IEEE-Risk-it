@@ -10,6 +10,20 @@ import * as G from "./game.js";
 const HEARTBEAT_MS = 2000;
 const STALE_MS = 7000;
 
+// A timer that keeps its pace when the Main Display's tab is in the
+// background. Browsers slow a hidden tab's own timers (down to once a minute
+// after a few minutes), which froze the game on whatever screen it was on;
+// timers inside a worker aren't slowed. Falls back to a normal timer.
+function steadyInterval(fn, ms) {
+  try {
+    const src = `setInterval(() => postMessage(0), ${ms});`;
+    const worker = new Worker(URL.createObjectURL(new Blob([src], { type: "text/javascript" })));
+    worker.onmessage = () => fn();
+    return;
+  } catch { /* no workers: use a normal timer */ }
+  setInterval(fn, ms);
+}
+
 // Applies a game-rule function to /live inside a transaction.
 // Resolves to the new state if it was applied, or null if it didn't apply.
 export async function transactLive(db, fn) {
@@ -53,8 +67,8 @@ export class Engine {
       this.bank = v ? Object.values(v) : [];
     });
     onValue(ref(db, "engine"), (s) => this.checkOwner(s.val()));
-    setInterval(() => this.beat(), HEARTBEAT_MS);
-    setInterval(() => this.tick(), 250);
+    steadyInterval(() => this.beat(), HEARTBEAT_MS);
+    steadyInterval(() => this.tick(), 250);
   }
 
   checkOwner(e) {
