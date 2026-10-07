@@ -437,18 +437,126 @@ button.choice:hover { border-color: var(--blue-200); transform: translateY(-2px)
   z-index: 400;
 }
 
+/* ---------- Game master sign-in (Main Display and Admin Panel) ----------
+   Full screen in IEEE blue, with the game's wheel turning slowly behind a
+   white card. */
 .login-wrap {
   align-items: center;
+  background:
+    radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--blue-400) 45%, transparent), transparent 60%),
+    linear-gradient(160deg, var(--blue-ieee), var(--blue-900));
   display: flex;
   inset: 0;
   justify-content: center;
-  padding: var(--space-4);
+  overflow: auto;
+  padding: var(--space-6) var(--space-4);
   position: fixed;
   z-index: 350;
 }
-.screen-admin .login-wrap { position: static; min-height: calc(100vh - var(--header-height)); }
-.login-card { gap: var(--space-5); max-width: 420px; width: 100%; }
-.login-card__logo { height: 48px; width: auto; }
+.login-wrap.hero-bg::before,
+.login-wrap.hero-bg::after { display: none; }
+.login-wheel {
+  animation: login-spin 120s linear infinite;
+  aspect-ratio: 1;
+  background: repeating-conic-gradient(
+    color-mix(in srgb, var(--gray-0) 9%, transparent) 0 45deg,
+    color-mix(in srgb, var(--gray-0) 3%, transparent) 45deg 90deg
+  );
+  border: 2px solid color-mix(in srgb, var(--gray-0) 22%, transparent);
+  border-radius: 50%;
+  left: 50%;
+  pointer-events: none;
+  position: fixed;
+  top: 50%;
+  translate: -50% -50%;
+  width: min(150vmin, 1100px);
+}
+@keyframes login-spin { to { rotate: 1turn; } }
+
+.login-card {
+  background: var(--gray-0);
+  border-radius: 22px;
+  box-shadow: 0 30px 80px rgb(4 12 26 / .35), 0 2px 8px rgb(4 12 26 / .12);
+  color: var(--color-text);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 420px;
+  padding: var(--space-10) var(--space-8) var(--space-8);
+  position: relative;
+  width: 100%;
+}
+/* align-self keeps the logo at its own proportions (480 by 157). */
+.login-card__logo { align-self: center; height: 52px; width: auto; }
+.login-card__head { text-align: center; }
+.login-card__title {
+  color: var(--blue-900);
+  font-family: var(--font-display);
+  font-size: clamp(40px, 6vw, 52px);
+  font-weight: var(--weight-bold);
+  letter-spacing: -.01em;
+  line-height: 1;
+  margin: 0;
+}
+.login-card__sub {
+  color: var(--color-brand);
+  font-size: 13px;
+  font-weight: var(--weight-bold);
+  letter-spacing: .14em;
+  margin: var(--space-3) 0 0;
+  text-transform: uppercase;
+}
+/* The fixed email, kept for password managers but out of sight. */
+.login-card__user {
+  border: 0;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+  padding: 0;
+  pointer-events: none;
+  position: absolute;
+  width: 1px;
+}
+.login-card__pw { display: block; position: relative; }
+.login-card__pw .control { padding-right: 52px; }
+.login-card__eye {
+  align-items: center;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-full);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: flex;
+  height: 40px;
+  justify-content: center;
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  translate: 0 -50%;
+  width: 40px;
+}
+.login-card__eye:hover { background: var(--color-bg-muted); color: var(--color-brand); }
+.login-card__eye:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 1px; }
+.login-card .field__error { margin: calc(var(--space-2) * -1) 0 0; }
+.login-card__submit { gap: var(--space-2); }
+.login-card__spinner {
+  animation: login-spin .8s linear infinite;
+  border: 2px solid color-mix(in srgb, var(--gray-0) 40%, transparent);
+  border-radius: 50%;
+  border-top-color: var(--gray-0);
+  display: none;
+  height: 18px;
+  width: 18px;
+}
+.login-card__submit.is-loading .login-card__spinner { display: inline-block; }
+
+@media (max-width: 479px) {
+  .login-card { padding: var(--space-8) var(--space-5) var(--space-6); }
+  .login-card__logo { height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .login-wheel { animation: none; }
+}
 
 /* ==========================================================================
    TEAM SCREEN
