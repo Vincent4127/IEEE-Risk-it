@@ -103,7 +103,10 @@
    MAIN DISPLAY
    ========================================================================== */
 
-.screen-display { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+/* At least one screen tall, so a projector shows the whole game with no
+   scrollbar; when the content is taller than the window (a laptop, nine
+   teams in the lobby) the page scrolls instead of cutting it off. */
+.screen-display { display: flex; flex-direction: column; min-height: 100vh; }
 .screen-display .app-header__inner { min-height: clamp(72px, 9vh, 104px); }
 .screen-display .brand__logo { height: clamp(44px, 5.4vh, 64px); }
 .screen-display .brand__title { font-size: clamp(28px, 2.4vw, 42px); }
@@ -168,7 +171,6 @@
 /* The Main Display is made for a projector, but on a tablet or phone it
    stacks: the stage first, the leaderboard under it, and the page scrolls. */
 @media (max-width: 900px) {
-  .screen-display { height: auto; min-height: 100vh; overflow: visible; }
   .display-main { grid-template-columns: 1fr; padding: var(--space-5) var(--space-4); }
   .screen-display .sidebar { overflow: visible; }
   .screen-display .stage { min-height: 60vh; }
