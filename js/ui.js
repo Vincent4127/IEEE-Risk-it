@@ -73,7 +73,6 @@ const EYE_OFF = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" str
 
 export function hostLogin(root, fb, title) {
   root.innerHTML = `
-    <span class="login-wheel" aria-hidden="true"></span>
     <form class="login-card" novalidate>
       <img class="login-card__logo" src="assets/ieee-uob-logo.png" alt="IEEE UOB Student Branch" width="480" height="157">
       <div class="login-card__head">
