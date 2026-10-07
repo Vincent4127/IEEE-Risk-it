@@ -64,7 +64,12 @@ function run(fb) {
   onValue(ref(db, "secret/questions"), (s) => { bank = Object.values(s.val() || {}); renderBank(); renderGame(); });
   onValue(ref(db, "secret/used"), (s) => { used = s.val() || {}; renderBank(); });
   onValue(ref(db, "secret/codes"), (s) => { codes = s.val() || {}; renderCodes(); });
-  onValue(ref(db, "claims"), (s) => { claims = s.val() || {}; renderCodes(); });
+  onValue(ref(db, "claims"), (s) => {
+    claims = s.val() || {};
+    renderCodes();
+    // Who has joined, for the leaderboards (team ids only, never the codes).
+    set(ref(db, "roster"), Object.fromEntries(Object.keys(claims).map((id) => [id, true]))).catch(() => {});
+  });
   onValue(ref(db, "history"), (s) => {
     const items = Object.values(s.val() || {}).sort((a, b) => b.at - a.at).slice(0, 40);
     $("#history").innerHTML = items.length
@@ -204,7 +209,7 @@ function run(fb) {
   }
 
   $("#btnCodes").addEventListener("click", () => {
-    if (Object.keys(codes).length && !confirm("Make new codes? The old codes stop working. Laptops already signed in stay signed in.")) return;
+    if (Object.keys(codes).length && !confirm("Make new codes? The old codes stop working. Devices already signed in stay signed in.")) return;
     generateCodes();
   });
 
@@ -224,7 +229,7 @@ function run(fb) {
 
   function renderCodes() {
     $("#codes").innerHTML = `
-      <thead><tr><th>Team</th><th>Code</th><th>Laptop</th><th></th></tr></thead>
+      <thead><tr><th>Team</th><th>Code</th><th>Device</th><th></th></tr></thead>
       <tbody>${TEAMS.map((t) => `
         <tr>
           <td>${esc(t.name)}</td>
@@ -238,8 +243,8 @@ function run(fb) {
     const b = e.target.closest("[data-release]");
     if (!b) return;
     const id = b.dataset.release;
-    if (!confirm(`Release ${G.teamName(id)}'s laptop? It goes back to the code screen and the code can be used on another laptop.`)) return;
-    remove(ref(db, `claims/${id}`)).then(() => logEvent(db, `${G.teamName(id)} laptop released`));
+    if (!confirm(`Release ${G.teamName(id)}'s device? It goes back to the code screen and the code can be used on another device.`)) return;
+    remove(ref(db, `claims/${id}`)).then(() => logEvent(db, `${G.teamName(id)} device released`));
   });
 
   $("#btnPrint").addEventListener("click", () => {
@@ -351,7 +356,7 @@ function run(fb) {
       bot();
     });
 
-    // Presses the buttons for the active team when no laptop has joined it.
+    // Presses the buttons for the active team when no device has joined it.
     const bot = () => {
       const s = live;
       if (!botsOn || !s || s.status !== "running" || !s.activeTeam || claims[s.activeTeam]) return;

@@ -7,7 +7,7 @@
 import { connect, ref, onValue, get, set, serverTimestamp } from "./firebase.js";
 import { ROUNDS, TEAMS } from "./config.js";
 import { teamName, teamNumber, ranking, roundCfg, questionNumber, initials, TURNS_PER_ROUND } from "./game.js";
-import { $, esc, toast, createLeaderboard, startCountdown } from "./ui.js";
+import { $, esc, toast, createLeaderboard, startCountdown, standings } from "./ui.js";
 import {
   choicesHTML, verdictHTML, questionTags, teamChip, modeCardsHTML,
   roundSummary, timerHTML, wheelResultLabel, podiumHTML, possessive,
@@ -105,7 +105,7 @@ function codeForm(fb, user, onJoined) {
     try {
       await set(ref(fb.db, `claims/${team}`), { uid: user.uid, code, at: serverTimestamp() });
     } catch {
-      return fail("This code is already in use on another laptop. Ask the game master to release it.");
+      return fail("This code is already in use on another device. Ask the game master to release it.");
     }
     writeStore(team);
     onJoined(team);
@@ -129,11 +129,16 @@ function play(fb, team) {
     live = s.val() || { status: "lobby", phase: "lobby", round: 1, turnIndex: 0 };
     draw();
   });
+  let roster = null;
+  onValue(ref(fb.db, "roster"), (s) => {
+    roster = s.val() || {};
+    draw(true);
+  });
   onValue(ref(fb.db, `actions/${team}`), (s) => {
     action = s.val();
     draw();
   });
-  // If the game master releases this laptop, go back to the code screen.
+  // If the game master releases this device, go back to the code screen.
   onValue(ref(fb.db, `claims/${team}`), (s) => {
     if (s.exists() && s.val().uid !== fb.auth.currentUser?.uid) {
       writeStore(null);
@@ -162,15 +167,17 @@ function play(fb, team) {
 
   function draw(force = false) {
     if (!live) return;
-    renderBoard(live);
+    renderBoard(live, roster);
     $("#paused").classList.toggle("hidden", live.status !== "paused");
     const score = live.scores?.[team] ?? 0;
-    const rank = ranking(live).findIndex((t) => t.id === team) + 1;
+    const board = standings(live, { ...roster, [team]: true });
+    const rank = board.findIndex((t) => t.id === team) + 1;
+    const medal = rank <= 3 && board.some((t) => t.score !== 0) ? ["gold", "silver", "bronze"][rank - 1] : "";
     $("#meta").innerHTML = `
       ${teamChip(team, "team-chip--on-dark")}
-      <span class="my-score" aria-label="${score} points, place ${rank} of ${TEAMS.length}">
+      <span class="my-score" aria-label="${score} points, place ${rank} of ${board.length}">
         <span class="my-score__pts"><b>${score}</b> pts</span>
-        <span class="my-score__rank ${rank <= 3 && ranking(live).some((t) => t.score !== 0) ? `my-score__rank--${["gold", "silver", "bronze"][rank - 1]}` : ""}">#${rank}<small> of ${TEAMS.length}</small></span>
+        <span class="my-score__rank ${medal ? `my-score__rank--${medal}` : ""}">#${rank}<small> of ${board.length}</small></span>
       </span>`;
 
     const mine = live.activeTeam === team;
@@ -189,8 +196,7 @@ function play(fb, team) {
   }
 
   function waiting() {
-    const r = ranking(live);
-    const rank = r.findIndex((t) => t.id === team) + 1;
+    const rank = standings(live, { ...roster, [team]: true }).findIndex((t) => t.id === team) + 1;
     switch (live.phase) {
       case "lobby":
         return panel(`
@@ -216,7 +222,7 @@ function play(fb, team) {
             <p class="overline finish__over">Game over</p>
             <h1 class="title-lg">You finished #${rank}</h1>
             <p class="lede">${live.scores?.[team] ?? 0} points. Thanks for playing!</p>
-            ${podiumHTML(live)}
+            ${podiumHTML(live, roster)}
           </div>`;
       default:
         return watch();

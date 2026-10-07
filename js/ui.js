@@ -22,30 +22,83 @@ export function toast(msg, kind = "") {
 
 export const fmtPoints = (p) => (p > 0 ? `+${p}` : `${p}`);
 
-// Live leaderboard. Keeps the previous scores so it can flash +/- changes.
+// Teams with a device signed in, ranked by points. `roster` is the
+// { teamId: true } list the Main Display and Admin Panel keep up to date.
+export function standings(live, roster) {
+  return ranking(live).filter((t) => roster?.[t.id]);
+}
+
+// A medal: two ribbon straps in IEEE blues over a metal disc with the place
+// on it. Gold, silver and bronze for places 1 to 3.
+const METALS = {
+  gold: ["#fff0a8", "#f4c63a", "#c9930f", "#7a5606"],
+  silver: ["#ffffff", "#d9dee4", "#a9b3be", "#47505a"],
+  bronze: ["#ffd9b8", "#e39a5f", "#b06a33", "#6b3a12"],
+};
+export function medalSVG(place) {
+  const kind = ["gold", "silver", "bronze"][place - 1];
+  if (!kind) return "";
+  const [hi, mid, lo, ink] = METALS[kind];
+  const g = `medal-${kind}`;
+  return `<svg class="medal" viewBox="0 0 40 50" role="img" aria-label="${["Gold", "Silver", "Bronze"][place - 1]} medal, place ${place}">
+    <defs><linearGradient id="${g}" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="${hi}"/><stop offset=".5" stop-color="${mid}"/><stop offset="1" stop-color="${lo}"/>
+    </linearGradient></defs>
+    <path d="M6 0h10l8 20h-10z" fill="#0f2547"/>
+    <path d="M34 0h-10l-8 20h10z" fill="#016eb6"/>
+    <path d="M24 0h10l-5 12z" fill="#4fa6e6" opacity=".55"/>
+    <circle cx="20" cy="33" r="15" fill="url(#${g})" stroke="${lo}" stroke-width="1.5"/>
+    <circle cx="20" cy="33" r="11" fill="none" stroke="#ffffff" stroke-opacity=".6" stroke-width="1.2"/>
+    <text x="20" y="38.5" text-anchor="middle" font-family="Karla, sans-serif" font-size="15" font-weight="700" fill="${ink}">${place}</text>
+  </svg>`;
+}
+
+// Live leaderboard of the teams that have joined. It follows the points:
+// when places change, rows glide to their new spot, and a score change
+// flashes +/-.
 export function createLeaderboard(listEl, { compact = false, me = null } = {}) {
   let prev = null;
-  return function render(live) {
-    const rows = ranking(live);
-    const medals = ["gold", "silver", "bronze"];
+  return function render(live, roster) {
+    const rows = standings(live, roster);
+    if (compact) listEl.classList.add("lb--compact");
+    if (!rows.length) {
+      listEl.innerHTML = `<li class="lb__empty">No teams have joined yet</li>`;
+      prev = {};
+      return;
+    }
     const scored = rows.some((t) => t.score !== 0);
+    const before = new Map([...listEl.querySelectorAll("[data-team]")].map((el) => [el.dataset.team, el.getBoundingClientRect().top]));
     listEl.innerHTML = rows.map((t, i) => {
       const delta = prev && prev[t.id] !== undefined ? t.score - prev[t.id] : 0;
+      const medal = scored && i < 3 ? ["gold", "silver", "bronze"][i] : "";
       const cls = [
         "lb__row",
-        i < 3 && scored ? `lb__row--${medals[i]}` : "",
+        medal ? `lb__row--${medal}` : "",
         live?.activeTeam === t.id ? "lb__row--active" : "",
         me === t.id ? "lb__row--me" : "",
       ].join(" ");
       return `
-        <li class="${cls}">
-          <span class="lb__rank">${i + 1}</span>
-          <span class="lb__avatar">${esc(initials(t.name))}</span>
+        <li class="${cls}" data-team="${t.id}">
+          <span class="lb__rank">${medal ? medalSVG(i + 1) : `<span class="lb__place">${i + 1}</span>`}</span>
           <span class="lb__name">${esc(t.name)}${me === t.id ? `<span class="lb__you">You</span>` : ""}${delta ? `<span class="lb__delta lb__delta--${delta > 0 ? "up" : "down"}">${fmtPoints(delta)}</span>` : ""}</span>
           <span class="lb__score">${t.score}</span>
         </li>`;
     }).join("");
-    if (compact) listEl.classList.add("lb--compact");
+    // Glide: start each row where it was, then let it move to its new place.
+    if (before.size && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      listEl.querySelectorAll("[data-team]").forEach((el) => {
+        const was = before.get(el.dataset.team);
+        if (was === undefined) return;
+        const dy = was - el.getBoundingClientRect().top;
+        if (!dy) return;
+        el.style.transition = "none";
+        el.style.transform = `translateY(${dy}px)`;
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          el.style.transition = "";
+          el.style.transform = "";
+        }));
+      });
+    }
     prev = Object.fromEntries(rows.map((t) => [t.id, t.score]));
   };
 }

@@ -1,10 +1,10 @@
 // Main Display (projector). Shows the game and runs the engine.
 
-import { connect, ref, onValue } from "./firebase.js";
+import { connect, ref, onValue, set } from "./firebase.js";
 import { HOST_EMAIL, TEAMS, ROUNDS } from "./config.js";
 import { Engine } from "./engine.js";
 import { teamName, roundCfg, ranking, initials, questionNumber, TURNS_PER_ROUND } from "./game.js";
-import { $, esc, toast, createLeaderboard, startCountdown, hostLogin } from "./ui.js";
+import { $, esc, toast, createLeaderboard, startCountdown, hostLogin, standings } from "./ui.js";
 import {
   choicesHTML, verdictHTML, questionTags, teamChip, modeCardsHTML,
   roundSummary, timerHTML, wheelResultLabel, podiumHTML, possessive,
@@ -47,9 +47,17 @@ function run(fb) {
   let viewKey = "";
   let stopTimer = () => {};
 
+  let roster = null;
   onValue(ref(fb.db, "claims"), (s) => {
     claims = s.val() || {};
+    // Publish who has joined (team ids only, never the codes) for the
+    // team screens' leaderboards.
+    set(ref(fb.db, "roster"), Object.fromEntries(Object.keys(claims).map((id) => [id, true]))).catch(() => {});
     if (live?.status === "lobby") draw(true);
+  });
+  onValue(ref(fb.db, "roster"), (s) => {
+    roster = s.val() || {};
+    if (live) draw(true);
   });
   onValue(ref(fb.db, "live"), (s) => {
     live = s.val() || { status: "lobby", phase: "lobby", round: 1, turnIndex: 0 };
@@ -57,7 +65,7 @@ function run(fb) {
   });
 
   function draw(force = false) {
-    renderBoard(live);
+    renderBoard(live, roster);
     renderMeta();
     $("#paused").classList.toggle("hidden", live.status !== "paused");
     document.body.dataset.phase = live.phase;
@@ -96,7 +104,7 @@ function run(fb) {
               <li class="joined__team ${claims[t.id] ? "joined__team--in" : ""}">
                 <span class="joined__dot"></span>${esc(t.name)}
               </li>`).join("")}</ul>
-            <p class="muted">Teams: enter your code on your laptop to join.</p>
+            <p class="muted">Teams: enter your code on your device to join.</p>
           </div>`;
 
       case "roundIntro":
@@ -169,8 +177,8 @@ function run(fb) {
     return `
       <div class="stage__center">
         <p class="overline stage__over">Final results</p>
-        <h1 class="title-lg">${esc(ranking(live)[0]?.name ?? "")} wins!</h1>
-        ${podiumHTML(live)}
+        <h1 class="title-lg">${esc(standings(live, roster)[0]?.name ?? "")} wins!</h1>
+        ${podiumHTML(live, roster)}
       </div>`;
   }
 

@@ -2,7 +2,7 @@
 
 import { WHEEL, MODE_HINTS, MODE_LABELS, ALL_IN, ROUNDS, QUESTIONS_PER_TEAM } from "./config.js";
 import { roundCfg, teamName, teamNumber, letter, modeLabel, questionNumber, ranking, initials, TURNS_PER_ROUND } from "./game.js";
-import { esc, fmtPoints } from "./ui.js";
+import { esc, fmtPoints, standings, medalSVG } from "./ui.js";
 
 export const DIFFICULTY_LABEL = { easy: "Easy", medium: "Medium", hard: "Hard", expert: "Expert" };
 
@@ -98,15 +98,15 @@ export function progressText(live) {
 }
 
 // The top three on a podium: silver, gold, bronze from left to right.
-export function podiumHTML(live) {
-  const rows = ranking(live);
+export function podiumHTML(live, roster) {
+  const rows = standings(live, roster);
   return `<ol class="podium">${[["gold", 0], ["silver", 1], ["bronze", 2]].map(([medal, i]) => {
     const t = rows[i];
     if (!t) return "";
     return `
       <li class="podium__step podium__step--${medal}">
         <div class="podium__person">
-          <span class="podium__avatar">${esc(initials(t.name))}</span>
+          <span class="podium__medal">${medalSVG(i + 1)}</span>
           <span class="podium__name">${esc(t.name)}</span>
           <span class="podium__pts">${t.score} pts</span>
         </div>

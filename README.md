@@ -7,8 +7,8 @@ follows the IEEE UOB website.
 
 | Page | Who uses it |
 | --- | --- |
-| `display.html` | **Main Display** on the projector laptop. It also runs the game, so keep it open the whole time. |
-| `team.html` | **Team Screen** on each team's laptop. |
+| `display.html` | **Main Display** on the projector device. It also runs the game, so keep it open the whole time. |
+| `team.html` | **Team Screen** on each team's device. |
 | `admin.html` | **Admin Panel** for the game master: start, pause, skip, fix scores, codes, questions. |
 | `index.html` | A start page that links to the three above. |
 
@@ -90,16 +90,16 @@ its own login.
    are left in each pool. Orange numbers mean fewer than 36 are left.
 3. **Access codes:** click **Generate codes**, then **Print cards**. Hand one
    card to each team.
-4. Open **Main Display** on the projector laptop and sign in. Press F11 for
+4. Open **Main Display** on the projector device and sign in. Press F11 for
    full screen. Keep this page open: it runs the game.
-5. Teams open `team.html` and type their code once. The laptop then stays
+5. Teams open `team.html` and type their code once. The device then stays
    locked to that team, even after a refresh. The Main Display lobby shows who
    has joined.
 6. In the Admin Panel, click **Start game**. Everything after that is
    automatic.
 
-If a team needs to switch laptops, click **Release** next to their name in
-the Admin Panel. Their code then works on a new laptop.
+If a team needs to switch devices, click **Release** next to their name in
+the Admin Panel. Their code then works on a new device.
 
 ## Putting it online (optional)
 
@@ -160,6 +160,6 @@ the open pages.
 
 - Team codes are only in the database, never in the code. A team can look up
   a code only if it already knows it.
-- A team laptop can only press Ready, choose, or submit on its own turn.
+- A team device can only press Ready, choose, or submit on its own turn.
 - Answers live in a part of the database only the game master's login can
-  read. Team laptops receive the correct answer only after the reveal.
+  read. Team devices receive the correct answer only after the reveal.

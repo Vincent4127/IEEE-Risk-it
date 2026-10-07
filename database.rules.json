@@ -23,6 +23,11 @@
       ".write": "auth != null && auth.token.email === 'host@riskit.game'"
     },
 
+    "roster": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.email === 'host@riskit.game'"
+    },
+
     "codes": {
       ".write": "auth != null && auth.token.email === 'host@riskit.game'",
       "$code": {
