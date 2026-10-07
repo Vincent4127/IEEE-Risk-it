@@ -23,23 +23,25 @@ export function toast(msg, kind = "") {
 export const fmtPoints = (p) => (p > 0 ? `+${p}` : `${p}`);
 
 // Live leaderboard. Keeps the previous scores so it can flash +/- changes.
-export function createLeaderboard(listEl, { compact = false } = {}) {
+export function createLeaderboard(listEl, { compact = false, me = null } = {}) {
   let prev = null;
   return function render(live) {
     const rows = ranking(live);
     const medals = ["gold", "silver", "bronze"];
+    const scored = rows.some((t) => t.score !== 0);
     listEl.innerHTML = rows.map((t, i) => {
       const delta = prev && prev[t.id] !== undefined ? t.score - prev[t.id] : 0;
       const cls = [
         "lb__row",
-        i < 3 && t.score > 0 ? `lb__row--${medals[i]}` : "",
+        i < 3 && scored ? `lb__row--${medals[i]}` : "",
         live?.activeTeam === t.id ? "lb__row--active" : "",
+        me === t.id ? "lb__row--me" : "",
       ].join(" ");
       return `
         <li class="${cls}">
           <span class="lb__rank">${i + 1}</span>
           <span class="lb__avatar">${esc(initials(t.name))}</span>
-          <span class="lb__name">${esc(t.name)}${delta ? `<span class="lb__delta lb__delta--${delta > 0 ? "up" : "down"}">${fmtPoints(delta)}</span>` : ""}</span>
+          <span class="lb__name">${esc(t.name)}${me === t.id ? `<span class="lb__you">You</span>` : ""}${delta ? `<span class="lb__delta lb__delta--${delta > 0 ? "up" : "down"}">${fmtPoints(delta)}</span>` : ""}</span>
           <span class="lb__score">${t.score}</span>
         </li>`;
     }).join("");

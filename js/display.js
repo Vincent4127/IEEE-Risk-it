@@ -7,7 +7,7 @@ import { teamName, roundCfg, ranking, initials, questionNumber, TURNS_PER_ROUND 
 import { $, esc, toast, createLeaderboard, startCountdown, hostLogin } from "./ui.js";
 import {
   choicesHTML, verdictHTML, questionTags, teamChip, modeCardsHTML,
-  roundSummary, timerHTML, wheelResultLabel,
+  roundSummary, timerHTML, wheelResultLabel, podiumHTML, possessive,
 } from "./views.js";
 import { wheelSVG, spin } from "./wheel.js";
 
@@ -105,14 +105,14 @@ function run(fb) {
             <p class="overline stage__over">Round ${live.round} of ${ROUNDS.length}</p>
             <h1 class="title-xl">Round ${live.round}</h1>
             <ul class="facts">${roundSummary(live.round).map((f) => `<li>${esc(f)}</li>`).join("")}</ul>
-            ${timerHTML("timer--sm")}
+            ${timerHTML()}
           </div>`;
 
       case "ready":
         return `
           <div class="stage__center">
             <div class="turn-avatar">${esc(initials(teamName(live.activeTeam)))}</div>
-            <h1 class="title-lg">${name}'s turn</h1>
+            <h1 class="title-lg">${possessive(name)} turn</h1>
             <p class="lede">Waiting for ${name} to press <strong>Ready</strong><span class="dots"></span></p>
           </div>`;
 
@@ -166,25 +166,11 @@ function run(fb) {
   }
 
   function finishedView() {
-    const rows = ranking(live);
-    const podium = [["gold", 0], ["silver", 1], ["bronze", 2]].map(([medal, i]) => {
-      const t = rows[i];
-      if (!t) return "";
-      return `
-        <li class="podium__step podium__step--${medal}">
-          <div class="podium__person">
-            <span class="podium__avatar">${esc(initials(t.name))}</span>
-            <span class="podium__name">${esc(t.name)}</span>
-            <span class="podium__pts">${t.score} pts</span>
-          </div>
-          <div class="podium__block">${i + 1}</div>
-        </li>`;
-    }).join("");
     return `
       <div class="stage__center">
         <p class="overline stage__over">Final results</p>
-        <h1 class="title-lg">${esc(rows[0]?.name ?? "")} wins!</h1>
-        <ol class="podium">${podium}</ol>
+        <h1 class="title-lg">${esc(ranking(live)[0]?.name ?? "")} wins!</h1>
+        ${podiumHTML(live)}
       </div>`;
   }
 

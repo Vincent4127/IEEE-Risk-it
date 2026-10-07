@@ -151,8 +151,11 @@ function run(fb) {
 
   // ---------- Scores ----------
 
+  // Always in team order (Team 1, 2, 3 …), so a row never moves while the
+  // game master is fixing it; the leaderboards show the ranking.
   function renderScores() {
-    const rows = G.ranking(live);
+    const byId = Object.fromEntries(G.ranking(live).map((t) => [t.id, t]));
+    const rows = TEAMS.map((t) => byId[t.id] ?? { id: t.id, name: t.name, score: 0 });
     const tbl = $("#scores");
     if (tbl.contains(document.activeElement) && document.activeElement.tagName === "INPUT") return;
     tbl.innerHTML = `

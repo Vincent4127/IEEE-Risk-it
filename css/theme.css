@@ -108,6 +108,14 @@
   --silver-soft: #eef1f4;
   --bronze: #8b4513;
   --bronze-soft: #fbebdd;
+  /* Bright metals for medal discs and stripes; the numbers on them use the
+     dark tones above (gold 5.4:1, silver 4.9:1, bronze 4.6:1). */
+  --gold-bright: linear-gradient(145deg, #ffe58a, #f2c230 55%, #d9a514);
+  --silver-bright: linear-gradient(145deg, #f7f9fb, #d3d9e0 55%, #b4bec9);
+  --bronze-bright: linear-gradient(145deg, #f6c79f, #e09a63 55%, #c27a40);
+  --gold-edge: #e0ac16;
+  --silver-edge: #aab4bf;
+  --bronze-edge: #c27a40;
 
   /* Type */
   --font-display: "Karla", system-ui, -apple-system, "Segoe UI", sans-serif;

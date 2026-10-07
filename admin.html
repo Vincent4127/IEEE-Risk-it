@@ -46,21 +46,23 @@
         </div>
       </section>
 
-      <!-- Game controls -->
-      <section class="card card--outlined card--pad-md admin-card admin-card--wide">
-        <div class="admin-card__head">
-          <div>
-            <p class="overline muted">Game</p>
-            <h2 class="h3" id="statusLine">Loading…</h2>
-            <p class="muted" id="progressLine"></p>
-          </div>
-          <div class="btn-row">
-            <button class="btn btn--primary" id="btnStart" type="button">Start game</button>
-            <button class="btn btn--secondary" id="btnPause" type="button">Pause</button>
-            <button class="btn btn--secondary" id="btnSkip" type="button">Skip turn</button>
-            <button class="btn btn--danger" id="btnReset" type="button">Reset game</button>
-          </div>
+      <!-- Game controls: pinned to the top of the screen while scrolling -->
+      <section class="admin-bar admin-card--wide" aria-label="Game controls">
+        <div class="admin-bar__status">
+          <p class="overline muted">Game</p>
+          <h2 class="h3" id="statusLine">Loading…</h2>
+          <p class="muted" id="progressLine"></p>
         </div>
+        <div class="btn-row">
+          <button class="btn btn--primary" id="btnStart" type="button">Start game</button>
+          <button class="btn btn--secondary" id="btnPause" type="button">Pause</button>
+          <button class="btn btn--secondary" id="btnSkip" type="button">Skip turn</button>
+        </div>
+      </section>
+
+      <!-- What is happening now -->
+      <section class="card card--outlined card--pad-md admin-card admin-card--wide">
+        <p class="overline muted">Now playing</p>
         <div id="nowPlaying" class="now-playing"></div>
       </section>
 
@@ -72,7 +74,7 @@
             <h2 class="h3">Fix a score</h2>
           </div>
         </div>
-        <table class="table" id="scores"></table>
+        <div class="table-scroll"><table class="table" id="scores"></table></div>
       </section>
 
       <!-- Teams & codes -->
@@ -87,7 +89,7 @@
             <button class="btn btn--sm btn--primary" id="btnCodes" type="button">Generate codes</button>
           </div>
         </div>
-        <table class="table" id="codes"></table>
+        <div class="table-scroll"><table class="table" id="codes"></table></div>
       </section>
 
       <!-- Question bank -->
@@ -112,6 +114,20 @@
       <section class="card card--outlined card--pad-md admin-card admin-card--wide">
         <p class="overline muted">History</p>
         <ol class="history" id="history"></ol>
+      </section>
+
+      <!-- Reset, kept apart from the controls used during play -->
+      <section class="card card--outlined card--pad-md admin-card admin-card--wide danger-zone">
+        <div class="admin-card__head">
+          <div>
+            <p class="overline">Danger zone</p>
+            <h2 class="h3">Reset the game</h2>
+            <p class="muted">Scores go to 0, every question becomes unused again, and the game goes back to the lobby. Team codes stay.</p>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn--danger" id="btnReset" type="button">Reset game</button>
+          </div>
+        </div>
       </section>
     </div>
     <div class="login-wrap" id="login"></div>

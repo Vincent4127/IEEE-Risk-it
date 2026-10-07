@@ -6,11 +6,11 @@
 
 import { connect, ref, onValue, get, set, serverTimestamp } from "./firebase.js";
 import { ROUNDS, TEAMS } from "./config.js";
-import { teamName, teamNumber, ranking, roundCfg, questionNumber, TURNS_PER_ROUND } from "./game.js";
+import { teamName, teamNumber, ranking, roundCfg, questionNumber, initials, TURNS_PER_ROUND } from "./game.js";
 import { $, esc, toast, createLeaderboard, startCountdown } from "./ui.js";
 import {
   choicesHTML, verdictHTML, questionTags, teamChip, modeCardsHTML,
-  roundSummary, timerHTML, wheelResultLabel,
+  roundSummary, timerHTML, wheelResultLabel, podiumHTML, possessive,
 } from "./views.js";
 import { wheelSVG, spin } from "./wheel.js";
 
@@ -115,7 +115,7 @@ function codeForm(fb, user, onJoined) {
 // ---------- Game ----------
 
 function play(fb, team) {
-  const renderBoard = createLeaderboard($("#leaderboard"));
+  const renderBoard = createLeaderboard($("#leaderboard"), { me: team });
   $("#side").classList.remove("hidden");
   let live = null;
   let action = null;
@@ -168,7 +168,10 @@ function play(fb, team) {
     const rank = ranking(live).findIndex((t) => t.id === team) + 1;
     $("#meta").innerHTML = `
       ${teamChip(team, "team-chip--on-dark")}
-      <span class="badge badge--on-dark">${score} pts · #${rank}</span>`;
+      <span class="my-score" aria-label="${score} points, place ${rank} of ${TEAMS.length}">
+        <span class="my-score__pts"><b>${score}</b> pts</span>
+        <span class="my-score__rank ${rank <= 3 && ranking(live).some((t) => t.score !== 0) ? `my-score__rank--${["gold", "silver", "bronze"][rank - 1]}` : ""}">#${rank}<small> of ${TEAMS.length}</small></span>
+      </span>`;
 
     const mine = live.activeTeam === team;
     if (live.turnId !== lastTurn) {
@@ -191,28 +194,68 @@ function play(fb, team) {
     switch (live.phase) {
       case "lobby":
         return panel(`
-          <p class="overline">You're in</p>
-          <h1 class="title-md">${esc(teamName(team))}</h1>
-          <p class="lede">Waiting for the game master to start<span class="dots"></span></p>`);
+          <span class="me-avatar" aria-hidden="true">${esc(initials(teamName(team)))}</span>
+          <div>
+            <p class="overline">You're in</p>
+            <h1 class="title-md">${esc(teamName(team))}</h1>
+          </div>
+          <p class="lede">Waiting for the game master to start<span class="dots"></span></p>
+          <ol class="round-list" aria-label="The rounds">
+            ${ROUNDS.map((rd) => `
+              <li><span class="round-list__num">${rd.number}</span>
+                <span class="round-list__text">${roundSummary(rd.number).map(esc).join(" · ")}</span></li>`).join("")}
+          </ol>`);
       case "roundIntro":
         return panel(`
           <p class="overline">Round ${live.round} of ${ROUNDS.length}</p>
-          <h1 class="title-md">Round ${live.round}</h1>
+          <h1 class="title-lg">Round ${live.round}</h1>
           <ul class="facts">${roundSummary(live.round).map((f) => `<li>${esc(f)}</li>`).join("")}</ul>`);
       case "finished":
-        return panel(`
-          <p class="overline">Game over</p>
-          <h1 class="title-md">You finished #${rank}</h1>
-          <p class="lede">${live.scores?.[team] ?? 0} points. Thanks for playing!</p>`);
-      default: {
-        const nextUp = teamOrderIn(live, team);
-        return panel(`
-          <div class="lock" aria-hidden="true">🔒</div>
-          <h1 class="title-md">${esc(teamName(live.activeTeam))}'s turn</h1>
-          <p class="lede">${esc(otherStatus())}</p>
-          ${nextUp ? `<p class="muted">${esc(nextUp)}</p>` : ""}`, "panel--locked");
-      }
+        return `
+          <div class="finish">
+            <p class="overline finish__over">Game over</p>
+            <h1 class="title-lg">You finished #${rank}</h1>
+            <p class="lede">${live.scores?.[team] ?? 0} points. Thanks for playing!</p>
+            ${podiumHTML(live)}
+          </div>`;
+      default:
+        return watch();
     }
+  }
+
+  // Another team's turn: who is playing, what they're doing, and the same
+  // wheel, question and answer the main screen shows.
+  function watch() {
+    const n = teamName(live.activeTeam);
+    const nextUp = teamOrderIn(live, team);
+    const head = `
+      <div class="watch__head">
+        <span class="watch__avatar" aria-hidden="true">${esc(initials(n))}</span>
+        <div class="watch__who">
+          <p class="watch__name">${esc(possessive(n))} turn</p>
+          <p class="watch__status"><span class="live-dot" aria-hidden="true"></span>${esc(otherStatus())}</p>
+        </div>
+        ${nextUp ? `<span class="next-up ${nextUp.startsWith("You're up next") ? "next-up--now" : ""}">${esc(nextUp)}</span>` : ""}
+      </div>`;
+    let body = "";
+    if (live.phase === "choose") {
+      body = modeCardsHTML(live.round);
+    } else if (live.phase === "spinning") {
+      body = `
+        <div class="wheel-wrap wheel-wrap--sm">${wheelSVG()}</div>
+        <p class="wheel-result">${esc(wheelResultLabel(live))}</p>`;
+    } else if ((live.phase === "question" || live.phase === "reveal") && live.question) {
+      body = `
+        <div class="qa qa--team qa--watch">
+          <div class="qa__top">
+            <div class="qa__tags">${questionTags(live)}</div>
+            ${live.phase === "question" ? timerHTML("timer--sm") : verdictHTML(live.result)}
+          </div>
+          <div class="card card--elevated qa__question"><p class="qa__text">${esc(live.question.text)}</p></div>
+          ${choicesHTML(live.question, { result: live.phase === "reveal" ? live.result : null })}
+        </div>`;
+    }
+    return `<div class="watch">${head}${body}</div>`;
   }
 
   function otherStatus() {
@@ -222,7 +265,7 @@ function play(fb, team) {
       choose: `${n} is choosing`,
       spinning: `${n} is spinning the wheel`,
       question: `${n} is answering`,
-      reveal: "Look at the main screen for the answer",
+      reveal: "Here's the answer",
     }[live.phase] || "Watch the main screen";
   }
 
@@ -231,21 +274,26 @@ function play(fb, team) {
       case "ready":
         return panel(`
           <p class="overline">Round ${live.round} · Question ${questionNumber(live.turnIndex)}</p>
-          <h1 class="title-lg">Your turn!</h1>
+          <h1 class="title-xl your-turn">Your turn!</h1>
           <p class="lede">Press Ready when your team is set.</p>
           <button class="btn btn--gradient btn--xl big-btn" data-ready type="button" ${sending || sent("ready") ? "disabled" : ""}>
             ${sent("ready") ? "Getting your question…" : "Ready"}
-          </button>`, "panel--active");
+          </button>`, "panel--active panel--turn");
       case "choose":
-        return panel(`
-          <p class="overline">Round ${live.round} · ${roundCfg(live.round).base} points base</p>
-          <h1 class="title-md">How do you want to play?</h1>
-          ${modeCardsHTML(live.round, { interactive: !(sending || sent("mode")) })}`, "panel--active");
+        return `
+          <div class="decide">
+            <p class="overline decide__over">Round ${live.round} · Your turn</p>
+            <h1 class="title-lg">How do you want to play?</h1>
+            ${modeCardsHTML(live.round, { interactive: !(sending || sent("mode")), stakes: true })}
+          </div>`;
       case "spinning":
-        return panel(`
-          <h1 class="title-md">Spinning the wheel…</h1>
-          <div class="wheel-wrap wheel-wrap--sm">${wheelSVG()}</div>
-          <p class="wheel-result">${esc(wheelResultLabel(live))}</p>`, "panel--active");
+        return `
+          <div class="decide">
+            <p class="overline decide__over">You took the risk</p>
+            <h1 class="title-md">Spinning the wheel…</h1>
+            <div class="wheel-wrap">${wheelSVG()}</div>
+            <p class="wheel-result">${esc(wheelResultLabel(live))}</p>
+          </div>`;
       case "question": {
         const done = sent("answer");
         const chosen = done ? Number(action.value) : selected;
@@ -253,7 +301,7 @@ function play(fb, team) {
           <div class="qa qa--team">
             <div class="qa__top">
               <div class="qa__tags">${questionTags(live)}</div>
-              ${timerHTML("timer--sm")}
+              ${timerHTML()}
             </div>
             <div class="card card--elevated qa__question"><p class="qa__text">${esc(live.question?.text)}</p></div>
             ${choicesHTML(live.question, { selected: chosen, interactive: !done })}
@@ -263,9 +311,18 @@ function play(fb, team) {
           </div>`;
       }
       case "reveal":
-        return panel(`
-          ${verdictHTML(live.result)}
-          <p class="lede">The next team is up in a moment.</p>`, "panel--active");
+        if (!live.question) {
+          return panel(`
+            ${verdictHTML(live.result)}
+            <p class="lede">The next team is up in a moment.</p>`, "panel--active");
+        }
+        return `
+          <div class="qa qa--team">
+            <div class="qa__top qa__top--center">${verdictHTML(live.result)}</div>
+            <div class="card card--elevated qa__question"><p class="qa__text">${esc(live.question.text)}</p></div>
+            ${choicesHTML(live.question, { result: live.result, picked: "Your answer" })}
+            <p class="after-note">The next team is up in a moment.</p>
+          </div>`;
       default:
         return waiting();
     }

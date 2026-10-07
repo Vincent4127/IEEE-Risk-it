@@ -1,7 +1,7 @@
 // Pieces of markup shared by the Main Display and the team screens.
 
 import { WHEEL, MODE_HINTS, MODE_LABELS, ALL_IN, ROUNDS, QUESTIONS_PER_TEAM } from "./config.js";
-import { roundCfg, teamName, teamNumber, letter, modeLabel, questionNumber, TURNS_PER_ROUND } from "./game.js";
+import { roundCfg, teamName, teamNumber, letter, modeLabel, questionNumber, ranking, initials, TURNS_PER_ROUND } from "./game.js";
 import { esc, fmtPoints } from "./ui.js";
 
 export const DIFFICULTY_LABEL = { easy: "Easy", medium: "Medium", hard: "Hard", expert: "Expert" };
@@ -10,9 +10,13 @@ export function timerHTML(size = "") {
   return `<div class="timer ${size}" data-timer><span class="timer__num" data-secs></span></div>`;
 }
 
+// "Volt's turn", but "Circuit Breakers' turn".
+export const possessive = (name) => `${name}${/s$/i.test(name) ? "'" : "'s"}`;
+
 // Answer choices. `result` turns on the reveal colours; `selected` marks the
-// team's pick before submitting; `interactive` renders buttons.
-export function choicesHTML(question, { result = null, selected = null, interactive = false } = {}) {
+// team's pick before submitting; `interactive` renders buttons. `picked` is
+// the tag on the chosen answer ("Their answer" on the projector).
+export function choicesHTML(question, { result = null, selected = null, interactive = false, picked = "Their answer" } = {}) {
   return `<div class="choices">${question.choices.map((c, i) => {
     const cls = ["choice"];
     if (result) {
@@ -25,7 +29,7 @@ export function choicesHTML(question, { result = null, selected = null, interact
     }
     const tag = interactive ? "button" : "div";
     const attrs = interactive ? `type="button" data-choice="${i}" aria-pressed="${i === selected}"` : "";
-    const mark = result && i === result.choice ? `<span class="choice__tag">${result.choice === result.correctIndex ? "Their answer ✓" : "Their answer"}</span>` : "";
+    const mark = result && i === result.choice ? `<span class="choice__tag">${esc(picked)}${result.choice === result.correctIndex ? " ✓" : ""}</span>` : "";
     return `<${tag} class="${cls.join(" ")}" ${attrs}>
         <span class="choice__letter">${letter(i)}</span>
         <span class="choice__text">${esc(c)}</span>${mark}
@@ -61,14 +65,18 @@ export function teamChip(id, extra = "") {
   return `<span class="team-chip ${extra}"><span class="team-chip__num">${teamNumber(id)}</span>${esc(teamName(id))}</span>`;
 }
 
-export function modeCardsHTML(round, { interactive = false } = {}) {
+// Safe / Risk / All In. With `stakes`, Safe also shows what a right answer
+// is worth; Risk and All In say nothing more, since the wheel decides.
+export function modeCardsHTML(round, { interactive = false, stakes = false } = {}) {
+  const base = roundCfg(round).base;
   return `<div class="modes">${roundCfg(round).choices.map((m) => {
     const tag = interactive ? "button" : "div";
     const attrs = interactive ? `type="button" data-mode="${m}"` : "";
     const label = m === "allin" ? ALL_IN.label : MODE_LABELS[m];
+    const stake = stakes && m === "safe" ? `<span class="mode__stake">+${base} ${base === 1 ? "point" : "points"} if right</span>` : "";
     return `<${tag} class="mode mode--${m}" ${attrs}>
         <span class="mode__label">${esc(label)}</span>
-        <span class="mode__hint">${esc(MODE_HINTS[m] || "")}</span>
+        <span class="mode__hint">${esc(MODE_HINTS[m] || "")}</span>${stake}
       </${tag}>`;
   }).join("")}</div>`;
 }
@@ -87,6 +95,24 @@ export function roundSummary(round) {
 
 export function progressText(live) {
   return `Round ${live.round} of ${ROUNDS.length} · Question ${questionNumber(live.turnIndex ?? 0)} of ${QUESTIONS_PER_TEAM} · Turn ${(live.turnIndex ?? 0) + 1}/${TURNS_PER_ROUND}`;
+}
+
+// The top three on a podium: silver, gold, bronze from left to right.
+export function podiumHTML(live) {
+  const rows = ranking(live);
+  return `<ol class="podium">${[["gold", 0], ["silver", 1], ["bronze", 2]].map(([medal, i]) => {
+    const t = rows[i];
+    if (!t) return "";
+    return `
+      <li class="podium__step podium__step--${medal}">
+        <div class="podium__person">
+          <span class="podium__avatar">${esc(initials(t.name))}</span>
+          <span class="podium__name">${esc(t.name)}</span>
+          <span class="podium__pts">${t.score} pts</span>
+        </div>
+        <div class="podium__block">${i + 1}</div>
+      </li>`;
+  }).join("")}</ol>`;
 }
 
 export function wheelResultLabel(live) {

@@ -328,9 +328,34 @@ body::before,
   place-items: center;
   width: 36px;
 }
-.lb__row--gold .lb__avatar { background: var(--gold-soft); color: var(--gold); box-shadow: 0 0 0 2px var(--gray-0), 0 0 0 4px var(--gold); }
-.lb__row--silver .lb__avatar { background: var(--silver-soft); color: var(--silver); box-shadow: 0 0 0 2px var(--gray-0), 0 0 0 4px var(--silver); }
-.lb__row--bronze .lb__avatar { background: var(--bronze-soft); color: var(--bronze); box-shadow: 0 0 0 2px var(--gray-0), 0 0 0 4px var(--bronze); }
+/* Top three: a medal for the place, a metal stripe and a warm tint. */
+.lb__row--gold { --medal: var(--gold); --medal-soft: var(--gold-soft); --medal-bright: var(--gold-bright); --medal-edge: var(--gold-edge); }
+.lb__row--silver { --medal: var(--silver); --medal-soft: var(--silver-soft); --medal-bright: var(--silver-bright); --medal-edge: var(--silver-edge); }
+.lb__row--bronze { --medal: var(--bronze); --medal-soft: var(--bronze-soft); --medal-bright: var(--bronze-bright); --medal-edge: var(--bronze-edge); }
+.lb__row--gold, .lb__row--silver, .lb__row--bronze {
+  background: linear-gradient(90deg, var(--medal-soft), var(--gray-0) 75%);
+  border-color: var(--medal-edge);
+  box-shadow: inset 5px 0 0 var(--medal-edge);
+}
+.lb__row--gold .lb__rank, .lb__row--silver .lb__rank, .lb__row--bronze .lb__rank {
+  background: var(--medal-bright);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--gray-0), 0 2px 6px rgb(0 0 0 / .18);
+  color: var(--medal);
+  display: grid;
+  font-size: .85em;
+  height: 1.9em;
+  place-items: center;
+  width: 1.9em;
+}
+.lb__row--gold .lb__avatar, .lb__row--silver .lb__avatar, .lb__row--bronze .lb__avatar {
+  background: var(--medal-soft);
+  box-shadow: 0 0 0 2px var(--gray-0), 0 0 0 4px var(--medal-edge);
+  color: var(--medal);
+}
+.lb__row--active.lb__row--gold, .lb__row--active.lb__row--silver, .lb__row--active.lb__row--bronze {
+  box-shadow: inset 5px 0 0 var(--medal-edge), 0 0 0 3px var(--color-brand-muted);
+}
 .lb__name {
   color: var(--blue-900);
   font-weight: 600;
@@ -375,14 +400,14 @@ body::before,
   padding: 0;
 }
 .podium__step { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
-.podium__step--silver { order: 1; --medal: var(--silver); --medal-soft: var(--silver-soft); --step-h: 130px; }
-.podium__step--gold { order: 2; --medal: var(--gold); --medal-soft: var(--gold-soft); --step-h: 180px; }
-.podium__step--bronze { order: 3; --medal: var(--bronze); --medal-soft: var(--bronze-soft); --step-h: 100px; }
+.podium__step--silver { order: 1; --medal: var(--silver); --medal-soft: var(--silver-soft); --medal-bright: var(--silver-bright); --medal-edge: var(--silver-edge); --step-h: 130px; }
+.podium__step--gold { order: 2; --medal: var(--gold); --medal-soft: var(--gold-soft); --medal-bright: var(--gold-bright); --medal-edge: var(--gold-edge); --step-h: 180px; }
+.podium__step--bronze { order: 3; --medal: var(--bronze); --medal-soft: var(--bronze-soft); --medal-bright: var(--bronze-bright); --medal-edge: var(--bronze-edge); --step-h: 100px; }
 .podium__person { align-items: center; display: flex; flex-direction: column; gap: var(--space-2); text-align: center; }
 .podium__avatar {
   background: var(--color-brand);
   border-radius: 50%;
-  box-shadow: 0 0 0 4px var(--gray-0), 0 0 0 7px var(--medal);
+  box-shadow: 0 0 0 4px var(--gray-0), 0 0 0 8px var(--medal-edge);
   color: var(--gray-0);
   display: grid;
   font-family: var(--font-display);
@@ -403,10 +428,10 @@ body::before,
 }
 .podium__block {
   align-items: center;
-  background: linear-gradient(180deg, var(--medal-soft), var(--gray-0));
-  border: 1px solid var(--color-border);
+  background: var(--medal-bright);
+  border: 0;
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  border-top: 5px solid var(--medal);
+  box-shadow: inset 0 -30px 40px rgb(255 255 255 / .25), 0 10px 30px rgb(4 12 26 / .3);
   box-shadow: var(--shadow-sm);
   color: var(--medal);
   display: flex;
