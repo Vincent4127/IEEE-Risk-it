@@ -10,9 +10,10 @@ import { teamName, ranking, roundCfg, questionNumber, initials, playersOf, turns
 import { $, esc, toast, createLeaderboard, startCountdown, standings } from "./ui.js";
 import {
   choicesHTML, verdictHTML, questionTags, teamChip, modeCardsHTML,
-  roundSummary, timerHTML, wheelResultLabel, podiumHTML, possessive,
+  roundSummary, timerHTML, wheelResultLabel, podiumHTML, possessive, winnerText,
 } from "./views.js";
 import { wheelSVG, spin } from "./wheel.js";
+import { sfx, soundButton } from "./sound.js";
 
 const slot = new URLSearchParams(location.search).get("slot") || "1";
 const STORE = `riskit.team.${slot}`;
@@ -115,6 +116,7 @@ function codeForm(fb, user, onJoined) {
 // ---------- Game ----------
 
 function play(fb, team) {
+  soundButton($("#soundBtn"));
   const renderBoard = createLeaderboard($("#leaderboard"), { me: team });
   $("#side").classList.remove("hidden");
   let live = null;
@@ -130,8 +132,14 @@ function play(fb, team) {
     draw();
   });
   let roster = null;
+  let rosterBlocked = false;
   onValue(ref(fb.db, "roster"), (s) => {
     roster = s.val() || {};
+    rosterBlocked = false;
+    draw(true);
+  }, () => {
+    // The published database rules are older than this version of the game.
+    rosterBlocked = true;
     draw(true);
   });
   onValue(ref(fb.db, `actions/${team}`), (s) => {
@@ -167,17 +175,17 @@ function play(fb, team) {
 
   function draw(force = false) {
     if (!live) return;
-    renderBoard(live, roster);
+    renderBoard(live, roster, { blocked: rosterBlocked });
     $("#paused").classList.toggle("hidden", live.status !== "paused");
     const score = live.scores?.[team] ?? 0;
-    const board = standings(live, { ...roster, [team]: true });
-    const rank = board.findIndex((t) => t.id === team) + 1;
-    const medal = rank <= 3 && board.some((t) => t.score !== 0) ? ["gold", "silver", "bronze"][rank - 1] : "";
+    const me = myPlace();
     $("#meta").innerHTML = `
       ${teamChip(team, "team-chip--on-dark")}
-      <span class="my-score" aria-label="${score} points, place ${rank} of ${board.length}">
+      <span class="my-score" aria-label="${score} points, ${me ? `place ${me.place} of ${me.of}` : "watching this game"}">
         <span class="my-score__pts"><b>${score}</b> pts</span>
-        <span class="my-score__rank ${medal ? `my-score__rank--${medal}` : ""}">#${rank}<small> of ${board.length}</small></span>
+        ${me
+          ? `<span class="my-score__rank ${me.medal ? `my-score__rank--${me.medal}` : ""}">#${me.place}<small> of ${me.of}</small></span>`
+          : `<span class="my-score__rank">Watching</span>`}
       </span>`;
 
     const mine = live.activeTeam === team;
@@ -193,10 +201,34 @@ function play(fb, team) {
     stopTimer = () => {};
     stage.innerHTML = mine ? myTurn() : waiting();
     wire();
+    if (mine) playFor();
+  }
+
+  // This team's place among the teams on the board, or null when it isn't
+  // playing (it joined after the start).
+  function myPlace() {
+    const board = standings(live, { ...roster, [team]: true });
+    const row = board.find((t) => t.id === team);
+    return row ? { place: row.place, of: board.length, medal: row.medal } : null;
+  }
+
+  // Sounds for this team's own turn only, so a room of devices stays quiet.
+  let lastSound = "";
+  function playFor() {
+    const moment = [live.phase, live.turnId, live.result?.outcome].join("|");
+    if (moment === lastSound || live.status === "paused") return;
+    const first = lastSound === "";
+    lastSound = moment;
+    if (first && live.phase !== "ready") return;
+    switch (live.phase) {
+      case "ready": return sfx.turn();
+      case "spinning": return sfx.spin(Math.max(1, ((live.phaseEndsAt ?? 0) - fb.now()) / 1000));
+      case "reveal": return ({ correct: sfx.correct, wrong: sfx.wrong, timeout: sfx.timeout })[live.result?.outcome]?.();
+    }
   }
 
   function waiting() {
-    const rank = standings(live, { ...roster, [team]: true }).findIndex((t) => t.id === team) + 1;
+    const rank = myPlace()?.place ?? 0;
     switch (live.phase) {
       case "lobby":
         return panel(`
@@ -220,7 +252,7 @@ function play(fb, team) {
         return `
           <div class="finish">
             <p class="overline finish__over">Game over</p>
-            <h1 class="title-lg">You finished #${rank}</h1>
+            <h1 class="title-lg">${rank ? `You finished #${rank}` : esc(winnerText(live, roster))}</h1>
             <p class="lede">${live.scores?.[team] ?? 0} points. Thanks for playing!</p>
             ${podiumHTML(live, roster)}
           </div>`;
@@ -243,8 +275,21 @@ function play(fb, team) {
         </div>
         ${nextUp ? `<span class="next-up ${nextUp.startsWith("You're up next") ? "next-up--now" : ""}">${esc(nextUp)}</span>` : ""}
       </div>`;
+    const upNext = nextUp.startsWith("You're up next");
+    const banner = upNext
+      ? `<div class="get-ready" role="status"><span class="get-ready__title">You're next. Get ready!</span><span class="get-ready__sub">Your turn starts as soon as ${esc(n)} finishes.</span></div>`
+      : "";
     let body = "";
-    if (live.phase === "choose") {
+    if (live.phase === "ready") {
+      const me = myPlace();
+      const st = live.stats?.[team] ?? {};
+      body = `
+        <dl class="me-strip">
+          <div><dt>Your score</dt><dd>${live.scores?.[team] ?? 0}</dd></div>
+          <div><dt>Your place</dt><dd>${me ? `#${me.place}<small> of ${me.of}</small>` : "Watching"}</dd></div>
+          <div><dt>Correct</dt><dd>${st.correct ?? 0}</dd></div>
+        </dl>`;
+    } else if (live.phase === "choose") {
       body = modeCardsHTML(live.round);
     } else if (live.phase === "spinning") {
       body = `
@@ -261,7 +306,7 @@ function play(fb, team) {
           ${choicesHTML(live.question, { result: live.phase === "reveal" ? live.result : null })}
         </div>`;
     }
-    return `<div class="watch">${head}${body}</div>`;
+    return `<div class="watch">${banner}${head}${body}</div>`;
   }
 
   function otherStatus() {
@@ -359,6 +404,7 @@ function play(fb, team) {
         (live.question?.seconds ?? 30) * 1000,
         fb.now,
         () => (live.status === "paused" ? live.pausedRemaining ?? 0 : null),
+        (secs) => { if (live.activeTeam === team && live.phase === "question" && secs > 0 && secs <= 5) sfx.tick(secs); },
       );
     }
     const wheel = stage.querySelector(".wheel");

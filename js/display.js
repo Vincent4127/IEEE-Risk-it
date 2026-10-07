@@ -4,12 +4,34 @@ import { connect, ref, onValue, set } from "./firebase.js";
 import { HOST_EMAIL, TEAMS, ROUNDS, QUESTIONS_PER_TEAM } from "./config.js";
 import { Engine } from "./engine.js";
 import { teamName, roundCfg, ranking, initials, questionNumber, turnsPerRound } from "./game.js";
-import { $, esc, toast, createLeaderboard, startCountdown, hostLogin, standings } from "./ui.js";
+import { $, esc, toast, createLeaderboard, startCountdown, hostLogin } from "./ui.js";
 import {
   choicesHTML, verdictHTML, questionTags, teamChip, modeCardsHTML,
-  roundSummary, timerHTML, wheelResultLabel, podiumHTML, possessive,
+  roundSummary, timerHTML, wheelResultLabel, podiumHTML, possessive, winnerText,
 } from "./views.js";
 import { wheelSVG, spin } from "./wheel.js";
+import { sfx, soundButton } from "./sound.js";
+
+const QR_LIB = "https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/+esm";
+// The address teams open: the team page next to this one.
+const TEAM_URL = new URL("team.html", location.href).href;
+
+// Full screen on and off from the header (instead of F11).
+const FULL_ON = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>`;
+const FULL_OFF = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>`;
+function fullscreenButton(btn) {
+  if (!document.fullscreenEnabled) { btn.hidden = true; return; }
+  const paint = () => {
+    const on = !!document.fullscreenElement;
+    btn.innerHTML = `${on ? FULL_OFF : FULL_ON}<span class="tool-btn__label">${on ? "Exit full screen" : "Full screen"}</span>`;
+  };
+  btn.addEventListener("click", () => {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(() => {});
+  });
+  document.addEventListener("fullscreenchange", paint);
+  paint();
+}
 
 const stage = $("#stage");
 const meta = $("#meta");
@@ -41,22 +63,36 @@ function run(fb) {
   engine.start();
   $("#takeOver").addEventListener("click", () => engine.takeOver());
 
+  soundButton($("#soundBtn"));
+  fullscreenButton($("#fullBtn"));
+
   const renderBoard = createLeaderboard($("#leaderboard"));
   let live = null;
   let claims = {};
   let viewKey = "";
   let stopTimer = () => {};
+  let firstView = true;
 
   let roster = null;
+  let rosterBlocked = false;
+  let rosterWarned = false;
   onValue(ref(fb.db, "claims"), (s) => {
     claims = s.val() || {};
     // Publish who has joined (team ids only, never the codes) for the
     // team screens' leaderboards.
-    set(ref(fb.db, "roster"), Object.fromEntries(Object.keys(claims).map((id) => [id, true]))).catch(() => {});
+    set(ref(fb.db, "roster"), Object.fromEntries(Object.keys(claims).map((id) => [id, true]))).catch(() => {
+      if (rosterWarned) return;
+      rosterWarned = true;
+      toast("Couldn't share who has joined: the database rules need updating (README, step 5).", "error");
+    });
     if (live?.status === "lobby") draw(true);
   });
   onValue(ref(fb.db, "roster"), (s) => {
     roster = s.val() || {};
+    rosterBlocked = false;
+    if (live) draw(true);
+  }, () => {
+    rosterBlocked = true;
     if (live) draw(true);
   });
   onValue(ref(fb.db, "live"), (s) => {
@@ -65,7 +101,7 @@ function run(fb) {
   });
 
   function draw(force = false) {
-    renderBoard(live, roster);
+    renderBoard(live, roster, { blocked: rosterBlocked });
     renderMeta();
     $("#paused").classList.toggle("hidden", live.status !== "paused");
     document.body.dataset.phase = live.phase;
@@ -78,6 +114,23 @@ function run(fb) {
     stopTimer = () => {};
     stage.innerHTML = view();
     after();
+    playFor(firstView);
+    firstView = false;
+  }
+
+  // One sound per new moment of the game (not when the page first opens).
+  let lastSound = "";
+  function playFor(first) {
+    const moment = [live.phase, live.turnId, live.round, live.result?.outcome].join("|");
+    if (first || moment === lastSound || live.status === "paused") { lastSound = moment; return; }
+    lastSound = moment;
+    switch (live.phase) {
+      case "roundIntro": return sfx.round();
+      case "ready": return sfx.turn();
+      case "spinning": return sfx.spin(Math.max(1, ((live.phaseEndsAt ?? 0) - fb.now()) / 1000));
+      case "reveal": return ({ correct: sfx.correct, wrong: sfx.wrong, timeout: sfx.timeout })[live.result?.outcome]?.();
+      case "finished": return sfx.win();
+    }
   }
 
   function renderMeta() {
@@ -104,7 +157,14 @@ function run(fb) {
               <li class="joined__team ${claims[t.id] ? "joined__team--in" : ""}">
                 <span class="joined__dot"></span>${esc(t.name)}
               </li>`).join("")}</ul>
-            <p class="muted">Teams: enter your code on your device to join.</p>
+            <div class="join-card">
+              <div class="join-card__qr" data-qr aria-hidden="true"></div>
+              <div class="join-card__text">
+                <p class="join-card__title">Join on your phone or laptop</p>
+                <p class="join-card__steps">Scan the code or open the link, then type the code on your team's card.</p>
+                <p class="join-card__url">${esc(TEAM_URL.replace(/^https?:\/\//, ""))}</p>
+              </div>
+            </div>
           </div>`;
 
       case "roundIntro":
@@ -177,7 +237,7 @@ function run(fb) {
     return `
       <div class="stage__center">
         <p class="overline stage__over">Final results</p>
-        <h1 class="title-lg">${esc(standings(live, roster)[0]?.name ?? "")} wins!</h1>
+        <h1 class="title-lg">${esc(winnerText(live, roster))}</h1>
         ${podiumHTML(live, roster)}
       </div>`;
   }
@@ -194,11 +254,31 @@ function run(fb) {
         total,
         fb.now,
         () => (live.status === "paused" ? live.pausedRemaining ?? 0 : null),
+        (secs) => { if (live.phase === "question" && secs > 0 && secs <= 5) sfx.tick(secs); },
       );
     }
+    const qr = stage.querySelector("[data-qr]");
+    if (qr) drawQR(qr);
     const wheel = stage.querySelector(".wheel");
     if (wheel && live.wheel) {
       spin(wheel, live.wheel.segment, live.wheel.spinId, live.phaseEndsAt ?? 0, fb.now());
     }
+  }
+
+  let qrSvg = null;
+  async function drawQR(el) {
+    if (!qrSvg) {
+      try {
+        const { default: qrcode } = await import(QR_LIB);
+        const q = qrcode(0, "M");
+        q.addData(TEAM_URL);
+        q.make();
+        qrSvg = q.createSvgTag({ cellSize: 6, margin: 0, scalable: true });
+      } catch {
+        el.closest(".join-card")?.classList.add("join-card--no-qr");
+        return;
+      }
+    }
+    el.innerHTML = qrSvg;
   }
 }

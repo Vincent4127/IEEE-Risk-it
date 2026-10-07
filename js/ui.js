@@ -25,9 +25,20 @@ export const fmtPoints = (p) => (p > 0 ? `+${p}` : `${p}`);
 // The teams on the leaderboard, ranked by points: in the lobby, those with a
 // device signed in (`roster`, kept by the Main Display and Admin Panel);
 // once the game starts, the teams taking turns.
+//
+// Each team also gets its `place`: teams on equal points share a place, the
+// way sports tables do it (1, 2, 2, 4). The order within a tie still follows
+// the tie-break in config.js. `medal` is gold, silver or bronze for places 1
+// to 3 once anyone has scored (at 0-0 nobody is ahead).
 export function standings(live, roster) {
   const inGame = live?.status !== "lobby" && live?.players?.length;
-  return ranking(live).filter((t) => (inGame ? live.players.includes(t.id) : roster?.[t.id]));
+  const rows = ranking(live).filter((t) => (inGame ? live.players.includes(t.id) : roster?.[t.id]));
+  const scored = rows.some((t) => t.score !== 0);
+  rows.forEach((t, i) => {
+    t.place = i > 0 && rows[i - 1].score === t.score ? rows[i - 1].place : i + 1;
+    t.medal = scored ? ["gold", "silver", "bronze"][t.place - 1] ?? "" : "";
+  });
+  return rows;
 }
 
 // A medal: two ribbon straps in IEEE blues over a metal disc with the place
@@ -60,19 +71,22 @@ export function medalSVG(place) {
 // flashes +/-.
 export function createLeaderboard(listEl, { compact = false, me = null } = {}) {
   let prev = null;
-  return function render(live, roster) {
+  // `blocked`: the database refused the list of joined teams, which happens
+  // when the published rules are older than this version of the game.
+  return function render(live, roster, { blocked = false } = {}) {
     const rows = standings(live, roster);
     if (compact) listEl.classList.add("lb--compact");
     if (!rows.length) {
-      listEl.innerHTML = `<li class="lb__empty">No teams have joined yet</li>`;
+      listEl.innerHTML = blocked && live?.status === "lobby"
+        ? `<li class="lb__empty lb__empty--warn">Can't load the leaderboard: the database rules need updating. See README, step 5.</li>`
+        : `<li class="lb__empty">No teams have joined yet</li>`;
       prev = {};
       return;
     }
-    const scored = rows.some((t) => t.score !== 0);
     const before = new Map([...listEl.querySelectorAll("[data-team]")].map((el) => [el.dataset.team, el.getBoundingClientRect().top]));
-    listEl.innerHTML = rows.map((t, i) => {
+    listEl.innerHTML = rows.map((t) => {
       const delta = prev && prev[t.id] !== undefined ? t.score - prev[t.id] : 0;
-      const medal = scored && i < 3 ? ["gold", "silver", "bronze"][i] : "";
+      const { medal } = t;
       const cls = [
         "lb__row",
         medal ? `lb__row--${medal}` : "",
@@ -81,7 +95,7 @@ export function createLeaderboard(listEl, { compact = false, me = null } = {}) {
       ].join(" ");
       return `
         <li class="${cls}" data-team="${t.id}">
-          <span class="lb__rank">${medal ? medalSVG(i + 1) : `<span class="lb__place">${i + 1}</span>`}</span>
+          <span class="lb__rank">${medal ? medalSVG(t.place) : `<span class="lb__place">${t.place}</span>`}</span>
           <span class="lb__name">${esc(t.name)}${me === t.id ? `<span class="lb__you">You</span>` : ""}${delta ? `<span class="lb__delta lb__delta--${delta > 0 ? "up" : "down"}">${fmtPoints(delta)}</span>` : ""}</span>
           <span class="lb__score">${t.score}</span>
         </li>`;
@@ -106,12 +120,16 @@ export function createLeaderboard(listEl, { compact = false, me = null } = {}) {
 }
 
 // Countdown: fills `el` with seconds left and sets --progress (1 → 0).
-export function startCountdown(el, getEnd, total, now, pausedRemaining) {
+// `onSecond(secs)` runs each time the whole second changes (for the ticks).
+export function startCountdown(el, getEnd, total, now, pausedRemaining, onSecond = null) {
   let raf;
+  let last = null;
   const draw = () => {
     const end = getEnd();
     const left = pausedRemaining() ?? Math.max(0, end - now());
     const secs = Math.ceil(left / 1000);
+    if (onSecond && last !== null && secs !== last && pausedRemaining() == null) onSecond(secs);
+    last = secs;
     el.style.setProperty("--progress", total ? Math.min(1, left / total) : 0);
     el.dataset.urgent = secs <= 5 ? "true" : "false";
     const num = el.querySelector("[data-secs]");

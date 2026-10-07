@@ -5,7 +5,7 @@
 import {
   connect, ref, onValue, set, update, remove, runTransaction, serverTimestamp,
 } from "./firebase.js";
-import { HOST_EMAIL, TEAMS, ROUNDS, WHEEL } from "./config.js";
+import { HOST_EMAIL, TEAMS, ROUNDS, WHEEL, QUESTIONS_PER_TEAM } from "./config.js";
 import { transactLive, logEvent } from "./engine.js";
 import * as G from "./game.js";
 import { $, esc, toast, hostLogin, fmtPoints } from "./ui.js";
@@ -60,6 +60,8 @@ function run(fb) {
     }
     renderGame();
     renderScores();
+    renderCodes();
+    renderBank();
   });
   onValue(ref(db, "secret/questions"), (s) => { bank = Object.values(s.val() || {}); renderBank(); renderGame(); });
   onValue(ref(db, "secret/used"), (s) => { used = s.val() || {}; renderBank(); });
@@ -67,6 +69,7 @@ function run(fb) {
   onValue(ref(db, "claims"), (s) => {
     claims = s.val() || {};
     renderCodes();
+    renderBank();
     // Who has joined, for the leaderboards (team ids only, never the codes).
     set(ref(db, "roster"), Object.fromEntries(Object.keys(claims).map((id) => [id, true]))).catch(() => {});
   });
@@ -234,14 +237,26 @@ function run(fb) {
     toast("New codes ready.");
   }
 
+  // Before the game: who has joined. Once it starts: who is playing (takes
+  // turns), who joined late and only watches, and who isn't in it.
   function renderCodes() {
+    const inGame = live && live.status !== "lobby";
+    const players = inGame ? G.playersOf(live) : [];
+    const status = (id) => {
+      if (!inGame) return claims[id] ? `<span class="badge badge--success">Joined</span>` : `<span class="badge badge--neutral">Not yet</span>`;
+      if (players.includes(id)) return `<span class="badge badge--success">Playing</span>${claims[id] ? "" : ` <span class="badge badge--warning">No device</span>`}`;
+      return claims[id] ? `<span class="badge badge--brand">Watching</span>` : `<span class="badge badge--neutral">Not playing</span>`;
+    };
+    $("#playingLine").textContent = inGame
+      ? `Playing: ${players.map(G.teamName).join(", ")}`
+      : `${Object.keys(claims).length} of ${TEAMS.length} teams joined. Only joined teams take turns.`;
     $("#codes").innerHTML = `
       <thead><tr><th>Team</th><th>Code</th><th>Device</th><th></th></tr></thead>
       <tbody>${TEAMS.map((t) => `
         <tr>
           <td>${esc(t.name)}</td>
           <td><code class="code">${esc(codes[t.id] ?? "—")}</code></td>
-          <td>${claims[t.id] ? `<span class="badge badge--success">Joined</span>` : `<span class="badge badge--neutral">Not yet</span>`}</td>
+          <td>${status(t.id)}</td>
           <td>${claims[t.id] ? `<button class="btn btn--sm btn--ghost" data-release="${t.id}" type="button">Release</button>` : ""}</td>
         </tr>`).join("")}</tbody>`;
   }
@@ -311,6 +326,7 @@ function run(fb) {
   });
 
   function renderBank() {
+    if (!$("#bank")) return;
     if (!bank.length) {
       $("#bank").innerHTML = `<p class="empty">No questions uploaded yet.</p>`;
       return;
@@ -322,9 +338,12 @@ function run(fb) {
       const left = all.filter((q) => !used[q.id]).length;
       return { all: all.length, left };
     };
-    const need = G.TURNS_PER_ROUND;
+    const teams = live && live.status !== "lobby"
+      ? G.playersOf(live).length
+      : Object.keys(claims).length || TEAMS.length;
+    const need = teams * QUESTIONS_PER_TEAM;
     $("#bank").innerHTML = `
-      <p class="muted">${bank.length} questions · ${Object.keys(used).length} used. Each cell shows <strong>unused / total</strong>. A pool needs up to ${need} per round to be safe.</p>
+      <p class="muted">${bank.length} questions · ${Object.keys(used).length} used. Each cell shows <strong>unused / total</strong>. With ${teams} ${teams === 1 ? "team" : "teams"}, a pool can be asked up to ${need} times per round; orange means fewer are left.</p>
       <div class="table-scroll"><table class="table table--bank">
         <thead><tr><th>Pool</th>${ROUNDS.map((r) => `<th class="num">Round ${r.number}</th>`).join("")}</tr></thead>
         <tbody>${pools.map((p) => `

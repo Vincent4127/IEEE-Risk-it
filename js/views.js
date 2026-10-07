@@ -62,7 +62,7 @@ export function questionTags(live) {
 }
 
 export function teamChip(id, extra = "") {
-  return `<span class="team-chip ${extra}"><span class="team-chip__num">${teamNumber(id)}</span>${esc(teamName(id))}</span>`;
+  return `<span class="team-chip ${extra}"><span class="team-chip__num">${teamNumber(id)}</span><span class="team-chip__name">${esc(teamName(id))}</span></span>`;
 }
 
 // Safe / Risk / All In. With `stakes`, Safe also shows what a right answer
@@ -100,19 +100,28 @@ export function progressText(live) {
 // The top three on a podium: silver, gold, bronze from left to right.
 export function podiumHTML(live, roster) {
   const rows = standings(live, roster);
-  return `<ol class="podium">${[["gold", 0], ["silver", 1], ["bronze", 2]].map(([medal, i]) => {
+  return `<ol class="podium">${[0, 1, 2].map((i) => {
     const t = rows[i];
     if (!t) return "";
+    const metal = ["gold", "silver", "bronze"][Math.min(t.place, 3) - 1];
     return `
-      <li class="podium__step podium__step--${medal}">
+      <li class="podium__step podium__step--${metal} podium__pos--${i}">
         <div class="podium__person">
-          <span class="podium__medal">${medalSVG(i + 1)}</span>
+          <span class="podium__medal">${t.place <= 3 ? medalSVG(t.place) : ""}</span>
           <span class="podium__name">${esc(t.name)}</span>
           <span class="podium__pts">${t.score} pts</span>
         </div>
-        <div class="podium__block">${i + 1}</div>
+        <div class="podium__block">${t.place}</div>
       </li>`;
   }).join("")}</ol>`;
+}
+
+// "Volt wins!", or the shared winners when first place is a tie.
+export function winnerText(live, roster) {
+  const top = standings(live, roster).filter((t) => t.place === 1).map((t) => t.name);
+  if (!top.length) return "Game over";
+  if (top.length === 1) return `${top[0]} wins!`;
+  return `It's a tie! ${top.slice(0, -1).join(", ")} and ${top[top.length - 1]} share first place`;
 }
 
 export function wheelResultLabel(live) {

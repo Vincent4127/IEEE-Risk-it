@@ -520,7 +520,7 @@ button.choice { font: inherit; }
    Full screen in IEEE blue, with the game's wheel turning slowly behind a
    white card. */
 .login-wrap {
-  align-items: center;
+  align-items: flex-start;
   display: flex;
   inset: 0;
   justify-content: center;
@@ -532,6 +532,7 @@ button.choice { font: inherit; }
 @keyframes login-spin { to { rotate: 1turn; } }
 
 .login-card {
+  margin: auto;
   background: var(--gray-0);
   border-radius: 22px;
   box-shadow: 0 30px 80px rgb(4 12 26 / .35), 0 2px 8px rgb(4 12 26 / .12);
@@ -869,7 +870,6 @@ button.choice { font: inherit; }
 @media (max-width: 480px) {
   .brand__logo { height: 32px; }
   .big-btn { min-width: 0; width: 100%; }
-  .screen-team .team-chip { display: none; }
   .my-score__pts b { font-size: 20px; }
   .panel--turn { padding-block: var(--space-8); }
 }
@@ -1037,3 +1037,138 @@ button.choice { font: inherit; }
   z-index: 600;
 }
 @media print { .demo-badge { display: none; } }
+
+
+/* ==========================================================================
+   Header tools, join card, get ready, shared places
+   ========================================================================== */
+
+/* Sound and full-screen buttons in the header. */
+/* The meta badges sit on the right, next to these buttons. */
+.app-header__inner > .header-meta { margin-left: auto; }
+.header-tools { align-items: center; display: flex; gap: var(--space-2); }
+.tool-btn {
+  align-items: center;
+  background: rgb(255 255 255 / .1);
+  border: 1px solid var(--color-border-on-dark-strong);
+  border-radius: var(--radius-full);
+  color: var(--gray-0);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 14px;
+  font-weight: var(--weight-bold);
+  gap: var(--space-2);
+  height: 40px;
+  padding: 0 var(--space-4);
+  white-space: nowrap;
+}
+.tool-btn:hover { background: rgb(255 255 255 / .18); }
+.tool-btn:focus-visible { outline: 2px solid var(--gray-0); outline-offset: 2px; }
+.tool-btn[aria-pressed="true"] { opacity: .75; }
+.tool-btn--icon { padding: 0; justify-content: center; width: 40px; }
+.tool-btn--icon .tool-btn__label {
+  border: 0; clip: rect(0 0 0 0); height: 1px; margin: -1px; overflow: hidden; position: absolute; white-space: nowrap; width: 1px;
+}
+.screen-display .tool-btn { font-size: clamp(14px, 1vw, 18px); height: clamp(40px, 4.4vh, 52px); }
+/* Hidden on the projector once the game runs full screen. */
+:fullscreen .screen-display .tool-btn__label, .screen-display:fullscreen .tool-btn__label { display: none; }
+
+/* Lobby: QR code and link for joining. */
+.join-card {
+  align-items: center;
+  background: var(--gray-0);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 50px rgb(4 12 26 / .3);
+  color: var(--blue-900);
+  display: flex;
+  gap: var(--space-6);
+  margin-top: var(--space-2);
+  max-width: 720px;
+  padding: var(--space-5) var(--space-6);
+  text-align: left;
+}
+.join-card__qr { flex: none; height: clamp(120px, 15vh, 190px); width: clamp(120px, 15vh, 190px); }
+.join-card__qr svg { display: block; height: 100%; width: 100%; }
+.join-card--no-qr .join-card__qr { display: none; }
+.join-card__title { font-family: var(--font-display); font-size: clamp(20px, 1.7vw, 30px); font-weight: var(--weight-bold); }
+.join-card__steps { color: var(--color-text-muted); font-size: clamp(15px, 1.15vw, 20px); margin-top: var(--space-1); }
+.join-card__url {
+  background: var(--color-brand-subtle);
+  border-radius: var(--radius-md);
+  color: var(--color-brand);
+  display: inline-block;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: clamp(15px, 1.2vw, 22px);
+  font-weight: var(--weight-bold);
+  margin-top: var(--space-3);
+  overflow-wrap: anywhere;
+  padding: var(--space-1) var(--space-3);
+}
+
+/* Team screen: the next team gets a banner; an empty wait shows its stats. */
+.get-ready {
+  animation: pulse-soft 1.8s ease-in-out infinite;
+  background: var(--gray-0);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 0 4px var(--blue-300), var(--shadow-lg);
+  color: var(--blue-900);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-5) var(--space-6);
+  text-align: center;
+  width: 100%;
+}
+.get-ready__title { font-family: var(--font-display); font-size: clamp(24px, 3vw, 36px); font-weight: var(--weight-bold); }
+.get-ready__sub { color: var(--color-text-muted); }
+.me-strip {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  width: 100%;
+}
+.me-strip div {
+  background: var(--color-surface-on-dark);
+  border: 1px solid var(--color-border-on-dark);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  text-align: center;
+}
+.me-strip dt { color: var(--color-hero-text-soft); font-size: 13px; font-weight: var(--weight-bold); letter-spacing: .08em; text-transform: uppercase; }
+.me-strip dd { font-family: var(--font-display); font-size: clamp(26px, 3vw, 38px); font-weight: var(--weight-bold); margin: var(--space-1) 0 0; }
+.me-strip small { font-size: .5em; opacity: .8; }
+
+/* Rules out of date. */
+.lb__empty--warn { border-color: #ffd2c9; color: #ffe4de; }
+
+/* Admin: who is playing. */
+.playing-line { margin-top: calc(var(--space-2) * -1); }
+
+/* Podium: places decide the metal, positions put the winner in the middle. */
+.podium__pos--0 { order: 2; }
+.podium__pos--1 { order: 1; }
+.podium__pos--2 { order: 3; }
+
+@media (max-width: 640px) {
+  .join-card { flex-direction: column; text-align: center; }
+  .me-strip { gap: var(--space-2); }
+  .me-strip div { padding: var(--space-3) var(--space-2); }
+}
+/* Small phones: keep the team name in the header, shortened if it's long. */
+@media (max-width: 480px) {
+  .screen-team .team-chip { display: inline-flex; font-size: 13px; gap: var(--space-2); max-width: 30vw; padding-right: var(--space-3); }
+  .screen-team .team-chip__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .screen-team .team-chip__num { flex: none; }
+  .screen-team .my-score { gap: var(--space-2); padding-left: var(--space-3); }
+  .screen-team .my-score__pts { font-size: 13px; }
+  .screen-team .my-score__rank small { display: none; }
+  .screen-team .app-header__inner { gap: var(--space-2); }
+  .screen-team .header-meta { flex-wrap: nowrap; gap: var(--space-2); }
+  .screen-display .tool-btn__label { display: none; }
+  .screen-display .tool-btn { justify-content: center; padding: 0; width: 40px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .get-ready { animation: none; }
+}

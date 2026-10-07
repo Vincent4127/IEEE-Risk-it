@@ -6,9 +6,51 @@
   <meta name="theme-color" content="#00629B">
   <title>Risk It · Admin</title>
   <link rel="icon" href="assets/ieee-uob-logo.png">
-  <link rel="stylesheet" href="css/theme.css">
-  <link rel="stylesheet" href="css/components.css">
-  <link rel="stylesheet" href="css/screens.css">
+  <link rel="stylesheet" href="css/theme.css?v=20261008001739">
+  <link rel="stylesheet" href="css/components.css?v=20261008001739">
+  <link rel="stylesheet" href="css/screens.css?v=20261008001739">
+  <!-- version:start (made by tools/stamp.py, don't edit by hand) -->
+  <script>
+    addEventListener("error", function (e) {
+      var m = String(e.message || "");
+      var scriptFailed = e.target && e.target.tagName === "SCRIPT";
+      if (!scriptFailed && !/provide an export|dynamically imported module|Importing a module script failed|Cannot use import/i.test(m)) return;
+      if (document.getElementById("load-fail")) return;
+      var d = document.createElement("div");
+      d.id = "load-fail";
+      d.setAttribute("role", "alert");
+      d.style.cssText = "position:fixed;left:16px;right:16px;bottom:16px;z-index:9999;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:14px 18px;border-radius:14px;background:#fff;color:#0f2547;font:600 16px/1.4 system-ui,sans-serif;box-shadow:0 12px 32px rgba(0,0,0,.35)";
+      d.innerHTML = "<span>This page didn't load properly, usually because the browser kept an older copy. Press Ctrl + Shift + R, or tap Reload.</span>";
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = "Reload";
+      b.style.cssText = "border:0;border-radius:999px;padding:10px 22px;background:#016eb6;color:#fff;font:700 16px system-ui,sans-serif;cursor:pointer";
+      b.onclick = function () { location.reload(); };
+      d.appendChild(b);
+      (document.body || document.documentElement).appendChild(d);
+    }, true);
+  </script>
+  <script type="importmap">
+    {
+      "imports": {
+        "./js/admin.js": "./js/admin.js?v=20261008001739",
+        "./js/backend-demo.js": "./js/backend-demo.js?v=20261008001739",
+        "./js/backend-firebase.js": "./js/backend-firebase.js?v=20261008001739",
+        "./js/config.js": "./js/config.js?v=20261008001739",
+        "./js/display.js": "./js/display.js?v=20261008001739",
+        "./js/engine.js": "./js/engine.js?v=20261008001739",
+        "./js/firebase-config.js": "./js/firebase-config.js?v=20261008001739",
+        "./js/firebase.js": "./js/firebase.js?v=20261008001739",
+        "./js/game.js": "./js/game.js?v=20261008001739",
+        "./js/sound.js": "./js/sound.js?v=20261008001739",
+        "./js/team.js": "./js/team.js?v=20261008001739",
+        "./js/ui.js": "./js/ui.js?v=20261008001739",
+        "./js/views.js": "./js/views.js?v=20261008001739",
+        "./js/wheel.js": "./js/wheel.js?v=20261008001739"
+      }
+    }
+  </script>
+  <!-- version:end -->
 </head>
 <body class="screen-admin">
   <header class="app-header">
@@ -89,6 +131,7 @@
             <button class="btn btn--sm btn--primary" id="btnCodes" type="button">Generate codes</button>
           </div>
         </div>
+        <p class="muted playing-line" id="playingLine"></p>
         <div class="table-scroll"><table class="table" id="codes"></table></div>
       </section>
 
@@ -135,6 +178,6 @@
 
   <div class="print-sheet" id="printSheet" aria-hidden="true"></div>
 
-  <script type="module" src="js/admin.js"></script>
+  <script type="module" src="js/admin.js?v=20261008001739"></script>
 </body>
 </html>

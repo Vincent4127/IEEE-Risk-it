@@ -34,7 +34,7 @@ While `js/firebase-config.js` still has the `PASTE_HERE` placeholders, the
 game runs in **demo mode**: everything lives in your browser and syncs
 between its tabs. Nothing is shared with other computers.
 
-1. In this folder run `python -m http.server 8000`, then open
+1. In this folder run `python serve.py`, then open
    <http://localhost:8000/admin.html> and sign in (any password works).
 2. Click **Quick setup** to load the sample questions and make codes.
 3. Click **Open Main Display** and sign in there too.
@@ -73,10 +73,11 @@ The pages use JavaScript modules, so they must be opened through a small
 local web server (double-clicking the HTML files won't work). In this folder:
 
 ```
-python -m http.server 8000
+python serve.py
 ```
 
-Then open <http://localhost:8000>.
+Then open <http://localhost:8000>. `serve.py` turns the browser's caching off,
+so every refresh shows your latest changes.
 
 **Testing all 9 teams in one browser:** open `team.html?slot=1`,
 `team.html?slot=2`, … `team.html?slot=9` in separate tabs. Each slot keeps
@@ -87,16 +88,19 @@ its own login.
 1. Open **Admin Panel** and sign in.
 2. **Question bank:** click **Upload file…** and pick your questions file (or
    **Load sample questions** to test). The table shows how many questions
-   are left in each pool. Orange numbers mean fewer than 36 are left.
+   are left in each pool. Orange numbers mean a pool could run short for the
+   number of teams that have joined.
 3. **Access codes:** click **Generate codes**, then **Print cards**. Hand one
    card to each team.
-4. Open **Main Display** on the projector device and sign in. Press F11 for
-   full screen. Keep this page open: it runs the game.
-5. Teams open `team.html` and type their code once. The device then stays
-   locked to that team, even after a refresh. The Main Display lobby shows who
-   has joined.
-6. In the Admin Panel, click **Start game**. Everything after that is
-   automatic.
+4. Open **Main Display** on the projector device and sign in. Click
+   **Full screen** and **Tap for sound** in its header. Keep this page open:
+   it runs the game.
+5. Teams scan the QR code on the Main Display (or open `team.html`) and type
+   their code once. The device then stays locked to that team, even after a
+   refresh. The Main Display lobby shows who has joined.
+6. In the Admin Panel, click **Start game**. Only the teams that have joined
+   by then take turns; a team that joins later can watch. Everything after
+   that is automatic.
 
 If a team needs to switch devices, click **Release** next to their name in
 the Admin Panel. Their code then works on a new device.
@@ -115,6 +119,11 @@ firebase deploy
 
 You get a link like `https://risk-it.web.app`. Online, upload the questions
 with **Upload file…** in the Admin Panel.
+
+**Before every deploy, run `python tools/stamp.py`.** It gives every file a
+new version number, so browsers that already opened the game fetch the update
+as one set instead of mixing old and new files (which stops a page working).
+If a page ever does load badly, it shows a banner with a Reload button.
 
 Avoid GitHub Pages unless you remove `questions/questions.json` first, because
 GitHub Pages would publish the answers.
