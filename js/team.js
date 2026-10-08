@@ -167,7 +167,12 @@ function play(fb, team) {
     try {
       await set(ref(fb.db, `actions/${team}`), { type, value, turnId: live.turnId, at: serverTimestamp() });
     } catch {
-      toast("That didn't go through. It may no longer be your turn.", "error");
+      // Still this team's turn, so the database refused the action itself:
+      // its published rules are older than this version of the game.
+      const stillMine = live.status === "running" && live.activeTeam === team;
+      toast(stillMine
+        ? "The database refused this. Its rules need updating: ask the game master to publish database.rules.json (README, step 5)."
+        : "That didn't go through. It may no longer be your turn.", "error");
     } finally {
       sending = false;
       draw(true);
