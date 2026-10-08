@@ -181,7 +181,9 @@ function showQuestion(s, now, q, seconds = null) {
   }
   // Drink and tie-break questions belong to no round, so no difficulty tag.
   const difficulty = q.difficulty || (q.round ? roundCfg(q.round).difficulty : null);
-  const secs = secondsFor(q, seconds);
+  // A round's own clock (config.js) wins over the question's.
+  const roundSecs = q.round && q.pool !== "drink" && q.pool !== "tiebreak" ? roundCfg(q.round).seconds : null;
+  const secs = roundSecs || secondsFor(q, seconds);
   // Never the answer: that stays with the game master. `open` questions have
   // no choices and are answered out loud.
   s.question = {

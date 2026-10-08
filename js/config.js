@@ -33,8 +33,10 @@ export const QUESTIONS_PER_TEAM = 4;
 //   base     points for a correct answer
 //   wrong    points for a wrong answer; running out of time counts as wrong
 //   choices  what the team picks before the question ([] = no choice)
+//   seconds  (optional) the clock for every question in the round, in
+//            place of each question's own timer
 export const ROUNDS = [
-  { number: 1, difficulty: "easy",   base: 1, wrong: 0, choices: [] },
+  { number: 1, difficulty: "easy",   base: 1, wrong: 0, choices: [], seconds: 10 },
   { number: 2, difficulty: "medium", base: 1, wrong: 0, choices: ["safe", "risk"] },
   { number: 3, difficulty: "hard",   base: 1, wrong: 0, choices: ["safe", "risk"] },
   { number: 4, difficulty: "expert", base: 1, wrong: 0, choices: ["normal", "allin"] },
