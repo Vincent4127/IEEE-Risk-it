@@ -1,6 +1,6 @@
 // Pieces of markup shared by the Main Display and the team screens.
 
-import { WHEEL, MODE_HINTS, MODE_LABELS, MODE_EMOJI, ALL_IN, STEAL, ROUNDS, QUESTIONS_PER_TEAM } from "./config.js";
+import { WHEEL, MODE_HINTS, MODE_LABELS, MODE_EMOJI, ALL_IN, STEAL, SNIPER, ROUNDS, QUESTIONS_PER_TEAM } from "./config.js";
 import { roundCfg, teamName, teamNumber, letter, modeLabel, questionNumber, ranking, initials, turnsPerRound } from "./game.js";
 import { esc, fmtPoints, standings, medalSVG } from "./ui.js";
 
@@ -103,6 +103,7 @@ function stakeText(round, m) {
   if (m === "safe" || m === "normal") return `+${base} if right`;
   if (m === "allin") return `+${ALL_IN.correct} if right · ${ALL_IN.wrong} if wrong`;
   if (m === "steal") return `You +${STEAL.correct}, them ${STEAL.targetCorrect} · wrong: them +${STEAL.targetWrong}`;
+  if (m === "sniper") return `+${SNIPER.correct} if right · ${SNIPER.wrong} if wrong`;
   return "";
 }
 

@@ -303,6 +303,11 @@
 .mode--steal { background: linear-gradient(150deg, #f97316, #c2410c); color: var(--gray-0); }
 .mode--steal .mode__hint { color: #ffedd5; }
 .mode--steal .mode__stake { background: rgb(255 255 255 / .2); color: var(--gray-0); }
+.mode--sniper { background: linear-gradient(150deg, #7c3aed, #4c1d95); color: var(--gray-0); }
+.mode--sniper .mode__hint { color: #ede9fe; }
+.mode--sniper .mode__stake { background: rgb(255 255 255 / .2); color: var(--gray-0); }
+/* Four cards in Round 4: two by two on a laptop or projector. */
+@media (min-width: 641px) { .decide .modes:has(> :nth-child(4)), .screen-display .modes:has(> :nth-child(4)) { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .mode__icon { font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif; font-size: clamp(34px, 3.4vw, 56px); line-height: 1.1; }
 button.mode { cursor: pointer; font: inherit; }
 /* Hover only where there is a mouse: on a phone a tapped card kept its

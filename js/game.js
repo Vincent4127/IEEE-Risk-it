@@ -10,7 +10,7 @@
 
 import {
   TEAMS, ROUNDS, QUESTIONS_PER_TEAM, TIMERS, DURATIONS,
-  WHEEL, ALL_IN, STEAL, MODE_LABELS, MODE_EMOJI, tieBreak,
+  WHEEL, ALL_IN, STEAL, SNIPER, MODE_LABELS, MODE_EMOJI, tieBreak,
 } from "./config.js";
 
 // The most turns a round can have (every configured team playing).
@@ -188,8 +188,11 @@ function showQuestion(s, now, q, seconds = null) {
   // Drink and tie-break questions belong to no round, so no difficulty tag.
   const difficulty = q.difficulty || (q.round ? roundCfg(q.round).difficulty : null);
   // A round's own clock (config.js) wins over the question's.
-  const roundSecs = q.round && q.pool !== "drink" && q.pool !== "tiebreak" ? roundCfg(q.round).seconds : null;
-  const secs = roundSecs || secondsFor(q, seconds);
+  // Sniper has its own short clock; otherwise the round's clock (config.js)
+  // wins over the question's. Leftover questions use the round being played.
+  const modeSecs = s.mode === "sniper" ? SNIPER.seconds : null;
+  const roundSecs = q.pool !== "drink" && q.pool !== "tiebreak" ? roundCfg(s.round)?.seconds : null;
+  const secs = modeSecs || roundSecs || secondsFor(q, seconds);
   // Never the answer: that stays with the game master. `open` questions have
   // no choices and are answered out loud.
   s.question = {
@@ -222,6 +225,7 @@ export function pointsFor(s, outcome) {
   }
   if (s.mode === "allin") return { points: right ? ALL_IN.correct : ALL_IN.wrong, targetPoints: 0 };
   if (s.mode === "steal") return { points: right ? STEAL.correct : STEAL.wrong, targetPoints: right ? STEAL.targetCorrect : STEAL.targetWrong };
+  if (s.mode === "sniper") return { points: right ? SNIPER.correct : SNIPER.wrong, targetPoints: 0 };
   const r = roundCfg(s.round);
   return { points: right ? r.base : r.wrong, targetPoints: 0 };
 }
@@ -394,7 +398,8 @@ export function spinWheel(skip = []) {
 //   tiebreak  sudden death
 export const POOLS = ["normal", "safe", "risk", "drink", "tiebreak"];
 export function poolFor(round, mode, wheel) {
-  if (mode === "steal") return "steal";
+  // Steal 4 and Sniper share the questions Rounds 2 and 3 left unused.
+  if (mode === "steal" || mode === "sniper") return "leftover";
   if (mode === "risk" && wheel && WHEEL[wheel.segment]?.kind === "drink") return "drink";
   if (mode === "risk") return "risk";
   if (mode === "safe") return "safe";
@@ -453,8 +458,8 @@ export function drawQuestion(bank, used, round, pool) {
   const free = (q) => !used[q.id];
   const tiers = pool === "drink"
     ? [(q) => q.pool === "drink"]
-    : pool === "steal"
-      // Steal 4: what Rounds 2 and 3 left unused, then Round 4.
+    : pool === "leftover"
+      // Steal 4 and Sniper: what Rounds 2 and 3 left unused, then Round 4.
       ? [(q) => (q.round === 2 || q.round === 3) && (q.pool === "safe" || q.pool === "risk"), (q) => q.round === 4 && q.pool === "normal"]
     : pool === "tiebreak"
       ? [(q) => q.pool === "tiebreak", (q) => q.round === 4 && q.pool === "normal", (q) => !!q.choices?.length]

@@ -210,7 +210,7 @@ export class Engine {
       });
     } else if (a.type === "target" && s.phase === "target") {
       this.handled.add(key);
-      const q = this.draw(s.round, s.mode === "steal" ? "steal" : "risk");
+      const q = this.draw(s.round, s.mode === "steal" ? "leftover" : "risk");
       this.run((x) => G.chooseTarget(x, now, a.turnId, String(a.value), q), (n) => {
         this.afterQuestion(n);
         logEvent(this.db, `R${n.round} · ${G.teamName(n.activeTeam)} is robbing ${G.teamName(n.target)}`);
