@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#00629B">
   <title>Risk It · Admin</title>
   <link rel="icon" href="assets/ieee-uob-logo.png">
-  <link rel="stylesheet" href="css/theme.css?v=20261008112043">
-  <link rel="stylesheet" href="css/components.css?v=20261008112043">
-  <link rel="stylesheet" href="css/screens.css?v=20261008112043">
+  <link rel="stylesheet" href="css/theme.css?v=20261008131813">
+  <link rel="stylesheet" href="css/components.css?v=20261008131813">
+  <link rel="stylesheet" href="css/screens.css?v=20261008131813">
   <!-- version:start (made by tools/stamp.py, don't edit by hand) -->
   <script>
     addEventListener("error", function (e) {
@@ -33,20 +33,20 @@
   <script type="importmap">
     {
       "imports": {
-        "./js/admin.js": "./js/admin.js?v=20261008112043",
-        "./js/backend-demo.js": "./js/backend-demo.js?v=20261008112043",
-        "./js/backend-firebase.js": "./js/backend-firebase.js?v=20261008112043",
-        "./js/config.js": "./js/config.js?v=20261008112043",
-        "./js/display.js": "./js/display.js?v=20261008112043",
-        "./js/engine.js": "./js/engine.js?v=20261008112043",
-        "./js/firebase-config.js": "./js/firebase-config.js?v=20261008112043",
-        "./js/firebase.js": "./js/firebase.js?v=20261008112043",
-        "./js/game.js": "./js/game.js?v=20261008112043",
-        "./js/sound.js": "./js/sound.js?v=20261008112043",
-        "./js/team.js": "./js/team.js?v=20261008112043",
-        "./js/ui.js": "./js/ui.js?v=20261008112043",
-        "./js/views.js": "./js/views.js?v=20261008112043",
-        "./js/wheel.js": "./js/wheel.js?v=20261008112043"
+        "./js/admin.js": "./js/admin.js?v=20261008131813",
+        "./js/backend-demo.js": "./js/backend-demo.js?v=20261008131813",
+        "./js/backend-firebase.js": "./js/backend-firebase.js?v=20261008131813",
+        "./js/config.js": "./js/config.js?v=20261008131813",
+        "./js/display.js": "./js/display.js?v=20261008131813",
+        "./js/engine.js": "./js/engine.js?v=20261008131813",
+        "./js/firebase-config.js": "./js/firebase-config.js?v=20261008131813",
+        "./js/firebase.js": "./js/firebase.js?v=20261008131813",
+        "./js/game.js": "./js/game.js?v=20261008131813",
+        "./js/sound.js": "./js/sound.js?v=20261008131813",
+        "./js/team.js": "./js/team.js?v=20261008131813",
+        "./js/ui.js": "./js/ui.js?v=20261008131813",
+        "./js/views.js": "./js/views.js?v=20261008131813",
+        "./js/wheel.js": "./js/wheel.js?v=20261008131813"
       }
     }
   </script>
@@ -148,7 +148,7 @@
           <div class="btn-row">
             <label class="btn btn--primary" for="bankFile">Upload file…</label>
             <input class="hidden" type="file" id="bankFile" accept=".json,application/json">
-            <button class="btn btn--secondary" id="btnSample" type="button">Load sample questions</button>
+            <button class="btn btn--secondary" id="btnSample" type="button">Load questions/questions.json</button>
             <button class="btn btn--ghost" id="btnClearUsed" type="button">Mark all unused</button>
           </div>
         </div>
@@ -183,12 +183,25 @@
     <p class="drink-dialog__emoji" aria-hidden="true">🧪</p>
     <h2 class="h2" id="drinkTitle">Mystery Drink</h2>
     <p class="drink-dialog__team" id="drinkTeam"></p>
-    <p class="muted">Hand them the mystery drink. When they've had it, start their quick question: 10 seconds, +2 if right, 0 if wrong.</p>
+    <p class="muted">Hand them the mystery drink. When they've had it, start their quick question. They answer out loud: +2 if right, 0 if wrong.</p>
     <button class="btn btn--primary btn--lg btn--block" id="btnDrink" type="button">Drink done: show the question</button>
+  </dialog>
+
+  <!-- Judge an answer given out loud (Mystery Drink): opens by itself -->
+  <dialog class="drink-dialog judge-dialog" id="judgeDialog" aria-labelledby="judgeTitle">
+    <p class="drink-dialog__emoji" aria-hidden="true">🧪</p>
+    <h2 class="h2" id="judgeTitle">Did they get it right?</h2>
+    <p class="drink-dialog__team" id="judgeTeam"></p>
+    <p class="judge-dialog__q" id="judgeQuestion"></p>
+    <p class="judge-dialog__answer"><span>Correct answer</span><strong id="judgeAnswer"></strong></p>
+    <div class="judge-dialog__buttons">
+      <button class="btn btn--lg judge-btn judge-btn--right" id="btnJudgeRight" type="button">✅ Correct</button>
+      <button class="btn btn--lg judge-btn judge-btn--wrong" id="btnJudgeWrong" type="button">❌ Wrong</button>
+    </div>
   </dialog>
 
   <div class="print-sheet" id="printSheet" aria-hidden="true"></div>
 
-  <script type="module" src="js/admin.js?v=20261008112043"></script>
+  <script type="module" src="js/admin.js?v=20261008131813"></script>
 </body>
 </html>

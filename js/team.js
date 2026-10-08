@@ -11,7 +11,7 @@ import { $, esc, toast, createLeaderboard, startCountdown, standings } from "./u
 import {
   choicesHTML, verdictHTML, questionTags, teamChip, modeCardsHTML,
   roundSummary, timerHTML, wheelResultLabel, podiumHTML, possessive, winnerText,
-  tieIntro, resultPopHTML, showResultPop,
+  tieIntro, resultPopHTML, showResultPop, questionCardHTML, openNoteHTML,
 } from "./views.js";
 import { wheelSVG, spin } from "./wheel.js";
 import { sfx, soundButton, createMomentSounds } from "./sound.js";
@@ -308,15 +308,15 @@ function play(fb, team) {
       body = `<div class="moment"><span class="big-emoji" aria-hidden="true">🧪</span><p class="moment__title">Mystery Drink!</p><p class="moment__sub">${esc(n)} is taking the drink.</p></div>`;
     } else if (live.phase === "reveal" && live.result?.outcome === "lucky") {
       body = `<div class="moment"><span class="big-emoji" aria-hidden="true">🍀</span><p class="moment__title">Lucky Point!</p><p class="moment__sub">${esc(n)} gets +1 with no question.</p></div>`;
-    } else if ((live.phase === "question" || live.phase === "reveal") && live.question) {
+    } else if (["question", "judge", "reveal"].includes(live.phase) && live.question) {
       body = `
         <div class="qa qa--team qa--watch">
           <div class="qa__top">
             <div class="qa__tags">${questionTags(live)}</div>
-            ${live.phase === "question" ? timerHTML("timer--sm") : verdictHTML(live.result)}
+            ${live.phase === "question" ? timerHTML("timer--sm") : live.phase === "reveal" ? verdictHTML(live.result) : ""}
           </div>
-          <div class="card card--elevated qa__question"><p class="qa__text">${esc(live.question.text)}</p></div>
-          ${choicesHTML(live.question, { result: live.phase === "reveal" ? live.result : null })}
+          ${questionCardHTML(live.question)}
+          ${live.question.open ? openNoteHTML(live) : choicesHTML(live.question, { result: live.phase === "reveal" ? live.result : null })}
         </div>`;
     }
     return `<div class="watch">${banner}${head}${body}</div>`;
@@ -331,6 +331,7 @@ function play(fb, team) {
       target: `${n} is choosing who to rob`,
       drink: `${n} is taking the mystery drink`,
       question: `${n} is answering`,
+      judge: "The game master is checking the answer",
       reveal: "Here's the answer",
     }[live.phase] || "Watch the main screen";
   }
@@ -381,10 +382,24 @@ function play(fb, team) {
         return panel(`
           <p class="big-emoji" aria-hidden="true">🧪</p>
           <h1 class="title-lg">Mystery Drink!</h1>
-          <p class="lede">Take the drink. Your quick question (10 seconds) starts as soon as the game master confirms.</p>
+          <p class="lede">Take the drink. Your quick question starts as soon as the game master confirms. Answer it out loud.</p>
           <p class="drink-note">Right answer: +2 · Wrong: 0</p>`, "panel--active");
       case "question": {
         const done = sent("answer");
+        if (live.question?.open) {
+          return `
+          <div class="qa qa--team">
+            <div class="qa__top">
+              <div class="qa__tags">${questionTags(live)}</div>
+              ${timerHTML()}
+            </div>
+            ${questionCardHTML(live.question)}
+            <p class="open-note">🗣️ Say your answer out loud, then press Answered.</p>
+            ${done
+              ? `<p class="locked-in">Answer given. The game master is checking it!</p>`
+              : `<button class="btn btn--gradient btn--xl btn--block" data-answered type="button" ${sending ? "disabled" : ""}>Answered</button>`}
+          </div>`;
+        }
         const chosen = done ? Number(action.value) : selected;
         return `
           <div class="qa qa--team">
@@ -392,13 +407,19 @@ function play(fb, team) {
               <div class="qa__tags">${questionTags(live)}</div>
               ${timerHTML()}
             </div>
-            <div class="card card--elevated qa__question"><p class="qa__text">${esc(live.question?.text)}</p></div>
+            ${questionCardHTML(live.question)}
             ${choicesHTML(live.question, { selected: chosen, interactive: !done })}
             ${done
               ? `<p class="locked-in">Answer locked in. Look at the main screen!</p>`
               : `<button class="btn btn--gradient btn--xl btn--block" data-submit type="button" ${selected == null || sending ? "disabled" : ""}>Submit answer</button>`}
           </div>`;
       }
+      case "judge":
+        return `
+          <div class="qa qa--team">
+            ${questionCardHTML(live.question)}
+            ${openNoteHTML(live)}
+          </div>`;
       case "reveal":
         if (live.result?.outcome === "lucky") {
           return panel(`
@@ -415,8 +436,8 @@ function play(fb, team) {
         return `
           <div class="qa qa--team">
             <div class="qa__top qa__top--center">${verdictHTML(live.result)}</div>
-            <div class="card card--elevated qa__question"><p class="qa__text">${esc(live.question.text)}</p></div>
-            ${choicesHTML(live.question, { result: live.result, picked: "Your answer" })}
+            ${questionCardHTML(live.question)}
+            ${live.question.open ? openNoteHTML(live) : choicesHTML(live.question, { result: live.result, picked: "Your answer" })}
             <p class="after-note">The next team is up in a moment.</p>
           </div>`;
       default:
@@ -439,6 +460,7 @@ function play(fb, team) {
         selected = Number(b.dataset.choice);
         draw();
       }));
+    stage.querySelector("[data-answered]")?.addEventListener("click", () => send("answer", null));
     stage.querySelector("[data-submit]")?.addEventListener("click", () => {
       if (selected != null) send("answer", selected);
     });

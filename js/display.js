@@ -8,7 +8,7 @@ import { $, esc, toast, createLeaderboard, startCountdown, hostLogin } from "./u
 import {
   choicesHTML, verdictHTML, questionTags, teamChip, modeCardsHTML,
   roundSummary, timerHTML, wheelResultLabel, podiumHTML, possessive, winnerText,
-  choiceQuestion, tieIntro, resultPopHTML, showResultPop,
+  choiceQuestion, tieIntro, resultPopHTML, showResultPop, questionCardHTML, openNoteHTML,
 } from "./views.js";
 import { wheelSVG, spin } from "./wheel.js";
 import { sfx, soundButton, soundPrompt, createMomentSounds } from "./sound.js";
@@ -229,10 +229,11 @@ function run(fb) {
             ${teamChip(live.activeTeam)}
             <p class="big-emoji" aria-hidden="true">🧪</p>
             <h1 class="title-lg">Mystery Drink!</h1>
-            <p class="lede">${name}, take the drink. Your quick question (10 seconds) starts when the game master confirms<span class="dots"></span></p>
+            <p class="lede">${name}, take the drink. Your quick question starts when the game master confirms<span class="dots"></span></p>
           </div>`;
 
       case "question":
+      case "judge":
       case "reveal":
         if (live.result?.outcome === "lucky") {
           return `
@@ -257,12 +258,10 @@ function run(fb) {
             <div class="qa__top">
               ${teamChip(live.activeTeam)}
               <div class="qa__tags">${questionTags(live)}</div>
-              ${live.phase === "question" ? timerHTML() : verdictHTML(live.result)}
+              ${live.phase === "question" ? timerHTML() : live.phase === "reveal" ? verdictHTML(live.result) : ""}
             </div>
-            <div class="card card--elevated qa__question">
-              <p class="qa__text">${esc(live.question?.text)}</p>
-            </div>
-            ${choicesHTML(live.question, { result: live.phase === "reveal" ? live.result : null })}
+            ${questionCardHTML(live.question)}
+            ${live.question?.open ? openNoteHTML(live) : choicesHTML(live.question, { result: live.phase === "reveal" ? live.result : null })}
           </div>`;
 
       case "finished":

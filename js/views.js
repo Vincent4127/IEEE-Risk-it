@@ -64,11 +64,31 @@ export function verdictHTML(result) {
     </div>`;
 }
 
+// The question, with its picture when it has one.
+export function questionCardHTML(q) {
+  if (!q) return "";
+  return `
+    <div class="card card--elevated qa__question ${q.image ? "qa__question--img" : ""}">
+      <p class="qa__text">${esc(q.text)}</p>
+      ${q.image ? `<img class="qa__img" src="${esc(q.image)}" alt="">` : ""}
+    </div>`;
+}
+
+// In place of the choices, for a question answered out loud (Mystery Drink):
+// what to do now, or the right answer once it's judged.
+export function openNoteHTML(live) {
+  if (live.phase === "question") return `<p class="open-note">🗣️ Answer out loud!</p>`;
+  if (live.phase === "judge") return `<p class="open-note open-note--wait">The game master is checking the answer<span class="dots"></span></p>`;
+  const a = live.result?.answerText;
+  return a ? `<p class="open-note open-note--answer"><span>Answer</span><strong>${esc(a)}</strong></p>` : "";
+}
+
 export function questionTags(live) {
   const q = live.question;
   const tags = [`<span class="badge badge--on-dark">${esc(modeLabel(live) || "Question")}</span>`];
   if (live.target) tags.push(`<span class="badge badge--on-dark">🏴‍☠️ Robbing ${esc(teamName(live.target))}</span>`);
-  if (q?.difficulty && !live.tiebreak) tags.push(`<span class="badge badge--on-dark">${DIFFICULTY_LABEL[q.difficulty] ?? esc(q.difficulty)}</span>`);
+  if (q?.category) tags.push(`<span class="badge badge--on-dark">${esc(q.category)}</span>`);
+  else if (q?.difficulty && !live.tiebreak) tags.push(`<span class="badge badge--on-dark">${DIFFICULTY_LABEL[q.difficulty] ?? esc(q.difficulty)}</span>`);
   return tags.join("");
 }
 

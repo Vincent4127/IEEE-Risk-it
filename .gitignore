@@ -3,3 +3,6 @@
 node_modules/
 .DS_Store
 Thumbs.db
+
+# The question file has the answers and the repo is public: never commit it.
+questions/*.json

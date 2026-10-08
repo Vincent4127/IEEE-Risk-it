@@ -114,15 +114,22 @@ export class Engine {
   answerFor(id) {
     return this.bank.find((q) => q.id === id)?.answer;
   }
+  answerTextFor(id) {
+    return this.bank.find((q) => q.id === id)?.answerText ?? null;
+  }
 
-  // Sudden death takes any unused question, Round 4 first.
   draw(round, pool) {
-    const tie = !!this.live?.tiebreak;
-    const q = G.drawQuestion(this.bank, this.used, round, pool, { anyRound: tie });
-    if (!q) this.onWarning(tie
+    const q = G.drawQuestion(this.bank, this.used, round, pool);
+    if (!q) this.onWarning(pool === "tiebreak"
       ? "No questions left for sudden death. The tied teams share first place."
       : `No questions left for round ${round}. The turn was skipped.`);
     return q;
+  }
+
+  // Mystery Drink can only come up while drink questions are left.
+  spin() {
+    const drinksLeft = !!G.drawQuestion(this.bank, this.used, null, "drink");
+    return G.spinWheel(drinksLeft ? [] : ["drink"]);
   }
 
   markUsed(next) {
@@ -158,12 +165,13 @@ export class Engine {
         // Only Double or Nothing and Double need their question now: Steal 2
         // waits for the target, Mystery Drink for the game master, and Lucky
         // Point has none.
-        const q = G.segmentOf(s)?.kind === "question" ? this.draw(s.round, "normal") : null;
+        const q = G.segmentOf(s)?.kind === "question" ? this.draw(s.round, "risk") : null;
         return this.run((x) => G.finishSpin(x, now, s.turnId, q), (n) => this.afterQuestion(n));
       }
       case "question": {
         const correct = this.answerFor(s.question?.id);
-        return this.run((x) => G.timeUp(x, now, s.turnId, correct), (n) => this.logReveal(n));
+        const text = this.answerTextFor(s.question?.id);
+        return this.run((x) => G.timeUp(x, now, s.turnId, correct, text), (n) => this.logReveal(n));
       }
       case "reveal":
         return this.run((x) => (x.phase === "reveal" && x.turnId === s.turnId ? G.nextTurn(x, now) : undefined));
@@ -191,18 +199,18 @@ export class Engine {
     const now = this.fb.now();
     if (a.type === "ready" && s.phase === "ready") {
       this.handled.add(key);
-      const q = G.asksStraightAway(s) ? this.draw(s.tiebreak ? 4 : s.round, "normal") : null;
+      const q = G.asksStraightAway(s) ? (s.tiebreak ? this.draw(null, "tiebreak") : this.draw(s.round, "normal")) : null;
       this.run((x) => G.pressReady(x, now, a.turnId, q), (n) => this.afterQuestion(n));
     } else if (a.type === "mode" && s.phase === "choose") {
       this.handled.add(key);
-      const pick = a.value === "risk" ? G.spinWheel() : this.draw(s.round, G.poolFor(a.value));
+      const pick = a.value === "risk" ? this.spin() : this.draw(s.round, G.poolFor(s.round, a.value));
       this.run((x) => G.chooseMode(x, now, a.turnId, a.value, pick), (n) => {
         this.afterQuestion(n);
         if (n.wheel) logEvent(this.db, `R${n.round} · ${G.teamName(n.activeTeam)} spun ${WHEEL[n.wheel.segment].label}`);
       });
     } else if (a.type === "target" && s.phase === "target") {
       this.handled.add(key);
-      const q = this.draw(s.round, "normal");
+      const q = this.draw(s.round, "risk");
       this.run((x) => G.chooseTarget(x, now, a.turnId, String(a.value), q), (n) => {
         this.afterQuestion(n);
         logEvent(this.db, `R${n.round} · ${G.teamName(n.activeTeam)} is robbing ${G.teamName(n.target)}`);
@@ -211,7 +219,9 @@ export class Engine {
       this.handled.add(key);
       if (a.at > s.phaseEndsAt + ANSWER_GRACE_MS) return; // too late, the timer handles it
       const correct = this.answerFor(s.question?.id);
-      this.run((x) => G.answer(x, now, a.turnId, Number(a.value), correct), (n) => this.logReveal(n));
+      this.run((x) => G.answer(x, now, a.turnId, Number(a.value), correct), (n) => {
+        if (n.phase === "reveal") this.logReveal(n);
+      });
     }
   }
 }

@@ -4,7 +4,8 @@
 // Admin Panel run them inside database transactions.
 //
 // A turn goes: ready → (choose) → (spinning → target | drink) → question →
-// reveal. Lucky Point skips straight from the spin to the reveal. After
+// (judge) → reveal. Mystery Drink questions are answered out loud, so after
+// the team presses Answered the game master judges them (the judge step). Lucky Point skips straight from the spin to the reveal. After
 // Round 4, a tie for first place is played off in sudden death.
 
 import {
@@ -163,8 +164,12 @@ export function chooseTarget(s, now, turnId, target, question) {
 // Mystery Drink: the game master confirmed the drink is done.
 export function confirmDrink(s, now, turnId, question) {
   if (s.status !== "running" || s.phase !== "drink" || s.turnId !== turnId) return;
-  return showQuestion(s, now, question, TIMERS.drink);
+  return showQuestion(s, now, question);
 }
+
+// The clock: the question's own seconds (from the question file), else the
+// default for its pool or difficulty in config.js.
+const secondsFor = (q, fallback) => Number(q.seconds) || fallback || TIMERS[q.pool] || TIMERS[q.difficulty] || 30;
 
 function showQuestion(s, now, q, seconds = null) {
   if (!q) {
@@ -174,13 +179,19 @@ function showQuestion(s, now, q, seconds = null) {
     s.phaseEndsAt = now + DURATIONS.reveal * 1000;
     return s;
   }
-  const difficulty = q.difficulty || roundCfg(s.round).difficulty;
-  const secs = seconds ?? TIMERS[difficulty] ?? 30;
+  // Drink and tie-break questions belong to no round, so no difficulty tag.
+  const difficulty = q.difficulty || (q.round ? roundCfg(q.round).difficulty : null);
+  const secs = secondsFor(q, seconds);
+  // Never the answer: that stays with the game master. `open` questions have
+  // no choices and are answered out loud.
   s.question = {
     id: q.id,
     text: q.text,
-    choices: q.choices,
+    choices: q.choices?.length ? q.choices : [],
+    open: !q.choices?.length,
     difficulty,
+    category: q.category ?? null,
+    image: q.image ?? null,
     seconds: secs,
     pool: q.pool,
   };
@@ -208,12 +219,29 @@ export function pointsFor(s, outcome) {
 
 export function answer(s, now, turnId, choice, correctIndex) {
   if (s.status !== "running" || s.phase !== "question" || s.turnId !== turnId) return;
+  if (s.question?.open) {
+    // Answered out loud: the clock stops and the game master judges it.
+    s.phase = "judge";
+    s.phaseEndsAt = null;
+    return s;
+  }
   return reveal(s, now, choice === correctIndex ? "correct" : "wrong", choice, correctIndex);
 }
 
-export function timeUp(s, now, turnId, correctIndex) {
+// The game master's verdict on an answer given out loud. `answerText` is the
+// right answer, shown on every screen with the result.
+export function judge(s, now, turnId, correct, answerText) {
+  if (s.status !== "running" || s.phase !== "judge" || s.turnId !== turnId) return;
+  const next = reveal(s, now, correct ? "correct" : "wrong", null, null);
+  next.result.answerText = answerText ?? null;
+  return next;
+}
+
+export function timeUp(s, now, turnId, correctIndex, answerText = null) {
   if (s.status !== "running" || s.phase !== "question" || s.turnId !== turnId) return;
-  return reveal(s, now, "timeout", null, correctIndex);
+  const next = reveal(s, now, "timeout", null, correctIndex);
+  if (s.question?.open) next.result.answerText = answerText;
+  return next;
 }
 
 function reveal(s, now, outcome, choice, correctIndex) {
@@ -332,12 +360,15 @@ export function resume(s, now) {
 
 // ---------- Wheel ----------
 
-export function spinWheel() {
-  const total = WHEEL.reduce((a, w) => a + w.weight, 0);
+// `skip`: wheel ids that can't come up (Mystery Drink once its questions run
+// out); the spin is shared among the others by their weights.
+export function spinWheel(skip = []) {
+  const live = WHEEL.map((w, i) => ({ w, i })).filter(({ w }) => !skip.includes(w.id) && w.weight > 0);
+  const total = live.reduce((a, { w }) => a + w.weight, 0);
   let r = Math.random() * total;
-  let segment = WHEEL.length - 1;
-  for (let i = 0; i < WHEEL.length; i++) {
-    r -= WHEEL[i].weight;
+  let segment = live[live.length - 1].i;
+  for (const { w, i } of live) {
+    r -= w.weight;
     if (r < 0) { segment = i; break; }
   }
   return { segment, spinId: Math.floor(Math.random() * 1e9) };
@@ -345,54 +376,76 @@ export function spinWheel() {
 
 // ---------- Questions ----------
 
-// Every question comes from the round's "normal" pool, except the Mystery
-// Drink quick question, which has its own "drink" pool.
-export function poolFor(mode, wheel) {
+// Pools in the question file:
+//   normal    Rounds 1 and 4 (Normal and All In share it)
+//   safe      Rounds 2 and 3, Safe
+//   risk      Rounds 2 and 3, Risk it (every wheel result with a question
+//             except the Mystery Drink)
+//   drink     Mystery Drink, answered out loud (any round)
+//   tiebreak  sudden death
+export const POOLS = ["normal", "safe", "risk", "drink", "tiebreak"];
+export function poolFor(round, mode, wheel) {
   if (mode === "risk" && wheel && WHEEL[wheel.segment]?.kind === "drink") return "drink";
+  if (mode === "risk") return "risk";
+  if (mode === "safe") return "safe";
   return "normal";
 }
 
 // Turns the raw question file into a clean list. Accepts answers as an
-// index (0–3) or a letter ("A"–"D").
+// index (0–3) or a letter ("A"–"D"). Drink questions have no choices: they
+// carry `answerText` for the game master instead.
 export function normaliseBank(raw) {
   const list = Array.isArray(raw) ? raw : raw?.questions;
   if (!Array.isArray(list)) throw new Error('Expected { "questions": [ … ] }');
   const seen = new Set();
   return list.map((q, i) => {
-    const where = `Question ${i + 1}`;
+    const where = `Question ${i + 1}${q?.id ? ` (${q.id})` : ""}`;
     if (!q.text) throw new Error(`${where} has no "text"`);
-    if (!Array.isArray(q.choices) || q.choices.length < 2) throw new Error(`${where} needs at least 2 "choices"`);
-    const round = Number(q.round);
-    if (!ROUNDS[round - 1]) throw new Error(`${where} has an invalid "round"`);
-    let ans = q.answer;
-    if (typeof ans === "string" && /^[A-Ha-h]$/.test(ans)) ans = ans.toUpperCase().charCodeAt(0) - 65;
-    ans = Number(ans);
-    if (!Number.isInteger(ans) || ans < 0 || ans >= q.choices.length) throw new Error(`${where} has an invalid "answer"`);
     const pool = q.pool || "normal";
-    let id = String(q.id || `r${round}-${pool}-${i + 1}`).replace(/[.#$\[\]/]/g, "-");
+    if (!POOLS.includes(pool)) throw new Error(`${where} has an unknown "pool" "${pool}"`);
+    const special = pool === "drink" || pool === "tiebreak";
+    const round = special ? null : Number(q.round);
+    if (!special && !ROUNDS[round - 1]) throw new Error(`${where} has an invalid "round"`);
+    const open = pool === "drink";
+    let ans = null;
+    if (open) {
+      if (!q.answerText) throw new Error(`${where} needs an "answerText"`);
+    } else {
+      if (!Array.isArray(q.choices) || q.choices.length < 2) throw new Error(`${where} needs at least 2 "choices"`);
+      ans = q.answer;
+      if (typeof ans === "string" && /^[A-Ha-h]$/.test(ans)) ans = ans.toUpperCase().charCodeAt(0) - 65;
+      ans = Number(ans);
+      if (!Number.isInteger(ans) || ans < 0 || ans >= q.choices.length) throw new Error(`${where} has an invalid "answer"`);
+    }
+    if (q.image != null && !/^[\w./-]+\.(png|jpe?g|webp|gif|svg)$/i.test(String(q.image))) throw new Error(`${where} has an invalid "image" path`);
+    const id = String(q.id || `${pool}-${round ?? "x"}-${i + 1}`).replace(/[.#$\[\]/]/g, "-");
     if (seen.has(id)) throw new Error(`Two questions share the id "${id}"`);
     seen.add(id);
     return {
       id, round, pool,
-      difficulty: q.difficulty || roundCfg(round).difficulty,
+      difficulty: q.difficulty || (round ? roundCfg(round).difficulty : null),
+      category: q.category ? String(q.category) : null,
+      seconds: Number(q.seconds) || null,
+      image: q.image ? String(q.image) : null,
       text: String(q.text),
-      choices: q.choices.map(String),
-      answer: ans,
+      choices: open ? [] : q.choices.map(String),
+      answer: open ? null : ans,
+      answerText: q.answerText ? String(q.answerText) : null,
     };
   });
 }
 
-// Picks an unused question: the exact pool first, then this round's normal
-// pool, then anything left in this round. With `anyRound` (sudden death),
-// anything unused at all as a last resort.
-export function drawQuestion(bank, used, round, pool, { anyRound = false } = {}) {
+// A random unused question from the pool. Drink and tie-break questions
+// belong to no round. If a round's pool runs dry the other pools of that
+// round fill in; sudden death falls back to unused Round 4 questions.
+// Drink questions are never replaced by another kind (the wheel re-spins).
+export function drawQuestion(bank, used, round, pool) {
   const free = (q) => !used[q.id];
-  const tiers = [
-    (q) => q.round === round && q.pool === pool,
-    (q) => q.round === round && q.pool === "normal",
-    (q) => q.round === round,
-  ];
-  if (anyRound) tiers.push((q) => q.pool === "normal", () => true);
+  const tiers = pool === "drink"
+    ? [(q) => q.pool === "drink"]
+    : pool === "tiebreak"
+      ? [(q) => q.pool === "tiebreak", (q) => q.round === 4 && q.pool === "normal", (q) => !!q.choices?.length]
+      : [(q) => q.round === round && q.pool === pool, (q) => q.round === round && q.pool !== "drink"];
   for (const match of tiers) {
     const options = bank.filter((q) => match(q) && free(q));
     if (options.length) return options[Math.floor(Math.random() * options.length)];

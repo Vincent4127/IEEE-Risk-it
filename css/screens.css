@@ -1364,3 +1364,70 @@ button.choice { font: inherit; }
 .sound-prompt__icon { font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif; font-size: 2.2em; }
 .sound-prompt.is-hidden { display: none; }
 @media (prefers-reduced-motion: reduce) { .sound-prompt { animation: none; } }
+
+
+/* ==========================================================================
+   Question pictures, out-loud answers, the judge dialog
+   ========================================================================== */
+
+.qa__question--img { display: flex; flex-direction: column; gap: var(--space-4); }
+.qa__img {
+  align-self: center;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  display: block;
+  max-height: min(42vh, 460px);
+  max-width: 100%;
+  object-fit: contain;
+}
+.qa--team .qa__img { max-height: 34vh; }
+/* Projector: small enough that the four answers still fit on the screen. */
+.screen-display .qa__img { max-height: 30vh; }
+.screen-display .qa__question--img { padding-block: clamp(16px, 2vw, 32px); }
+.qa--watch .qa__img { max-height: 26vh; }
+.admin-q__img { border-radius: var(--radius-md); display: block; margin: var(--space-2) 0; max-height: 180px; max-width: 100%; }
+.admin-q__open { color: var(--color-success); font-size: 18px; margin: var(--space-2) 0 0; }
+
+.open-note {
+  background: rgb(255 255 255 / .12);
+  border: 2px dashed var(--color-border-on-dark-strong);
+  border-radius: var(--radius-lg);
+  color: var(--gray-0);
+  font-family: var(--font-display);
+  font-size: clamp(20px, 2.2vw, 36px);
+  font-weight: var(--weight-bold);
+  padding: var(--space-5);
+  text-align: center;
+}
+.open-note--wait { border-style: solid; font-size: clamp(18px, 1.8vw, 28px); }
+.open-note--answer {
+  align-items: center;
+  background: var(--color-success-bg);
+  border: 3px solid var(--color-success);
+  color: var(--color-success);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.open-note--answer span { font-size: .55em; letter-spacing: .12em; text-transform: uppercase; }
+.open-note--answer strong { color: var(--blue-900); font-size: 1.2em; }
+
+.judge-dialog__q { color: var(--blue-900); font-family: var(--font-display); font-size: 20px; font-weight: var(--weight-bold); margin: var(--space-2) 0 0; }
+.judge-dialog__answer {
+  background: var(--color-success-bg);
+  border-radius: var(--radius-md);
+  color: var(--color-success);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: var(--space-4) 0 0;
+  padding: var(--space-3) var(--space-4);
+}
+.judge-dialog__answer span { font-size: 12px; font-weight: var(--weight-bold); letter-spacing: .1em; text-transform: uppercase; }
+.judge-dialog__answer strong { color: var(--blue-900); font-size: 22px; }
+.judge-dialog__buttons { display: grid; gap: var(--space-3); grid-template-columns: 1fr 1fr; margin-top: var(--space-5); }
+.judge-btn { border: 0; color: var(--gray-0); font-size: 18px; justify-content: center; }
+.judge-btn--right { background: #15803d; }
+.judge-btn--wrong { background: #b91c1c; }
+.judge-btn:hover:not(:disabled) { filter: brightness(1.1); }
+.judge-btn:disabled { opacity: .5; }

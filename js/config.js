@@ -40,15 +40,16 @@ export const ROUNDS = [
   { number: 4, difficulty: "expert", base: 1, wrong: 0, choices: ["normal", "allin"] },
 ];
 
-// Seconds on the clock: by difficulty, then the Mystery Drink quick question
-// and the sudden-death tie-break.
+// Seconds on the clock when a question has no "seconds" of its own (every
+// question in the question file does): by difficulty, then the Mystery Drink
+// quick question and the sudden-death tie-break.
 export const TIMERS = {
   easy: 20,
   medium: 25,
   hard: 30,
   expert: 40,
   drink: 10,
-  tiebreak: 30,
+  tiebreak: 25,
 };
 
 // How long (seconds) the automatic screens stay up.

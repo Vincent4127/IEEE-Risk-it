@@ -36,7 +36,7 @@ between its tabs. Nothing is shared with other computers.
 
 1. In this folder run `python serve.py`, then open
    <http://localhost:8000/admin.html> and sign in (any password works).
-2. Click **Quick setup** to load the sample questions and make codes.
+2. Click **Quick setup** to load `questions/questions.json` and make codes.
 3. Click **Open Main Display** and sign in there too.
 4. Click **Bots: off** to turn the bots on. They play for every team that
    hasn't joined.
@@ -87,7 +87,7 @@ its own login.
 
 1. Open **Admin Panel** and sign in.
 2. **Question bank:** click **Upload file…** and pick your questions file (or
-   **Load sample questions** to test). The table shows how many questions
+   **Load questions/questions.json** on this computer). The table shows how many questions
    are left in each pool. Orange numbers mean a pool could run short for the
    number of teams that have joined.
 3. **Access codes:** click **Generate codes**, then **Print cards**. Hand one
@@ -170,34 +170,43 @@ GitHub Pages would publish the answers.
 
 ## The question file
 
+The questions come from *Risk_It_10_Teams_Question_Bank_CORRECTED.pdf*
+(287 questions). They live in `questions/questions.json` **on the game
+master's computer only**: the file has the answers and this repository is
+public, so `.gitignore` keeps it out of git and Firebase Hosting skips the
+folder. Load it in the Admin Panel with **Load questions/questions.json**
+(locally) or **Upload file…** (online, or from any other computer).
+
 ```json
 {
   "questions": [
-    {
-      "round": 2,
-      "pool": "normal",
-      "difficulty": "medium",
-      "text": "Which law relates voltage, current and resistance?",
-      "choices": ["Ohm's law", "Faraday's law", "Coulomb's law", "Lenz's law"],
-      "answer": "A"
-    }
+    { "id": "R2-C1-T01-S", "round": 2, "pool": "safe", "category": "Business", "seconds": 20,
+      "text": "Which company is famous for the slogan Just Do It?",
+      "choices": ["Adidas", "Nike", "Puma", "Reebok"], "answer": "B" },
+    { "id": "DRINK-01", "pool": "drink", "seconds": 10,
+      "text": "What is 15 percent of 200?", "answerText": "30" }
   ]
 }
 ```
 
-- `round`: 1 to 4.
-- `pool`: `normal` for every question in the round (Safe, Risk it, Normal and
-  All In all use it). Use `drink` for the short Mystery Drink questions
-  (Rounds 2 and 3, 10 seconds each).
-- `difficulty`: `easy`, `medium`, `hard` or `expert`. It sets the timer. If
-  you leave it out, the round's difficulty is used.
-- `answer`: a letter (`"A"` to `"D"`) or a number (0 to 3).
-- `id` is optional. Give one if you want to know exactly which question is which.
+| `pool` | Used for |
+| --- | --- |
+| `normal` | Rounds 1 and 4 (Normal and All In share it) |
+| `safe` | Rounds 2 and 3, 🛡️ Safe |
+| `risk` | Rounds 2 and 3, 🔥 Risk it (Double or Nothing, Steal 2, Double) |
+| `drink` | 🧪 Mystery Drink: no choices, answered out loud, `answerText` instead of `answer` |
+| `tiebreak` | ⚔️ Sudden death |
 
-If a pool runs out, the game takes a question from the same round's `normal`
-pool, then from any pool in that round. It never repeats a question. If a
-round is completely empty, the turn is skipped with 0 points. Sudden death
-uses unused Round 4 questions first, then anything left.
+- `round` (1 to 4) for `normal`, `safe` and `risk`; none for `drink` and `tiebreak`.
+- `seconds`: the question's own timer.
+- `answer`: a letter (`"A"` to `"D"`) or a number (0 to 3).
+- `image` (optional): a picture shown with the question, for example
+  `"assets/questions/R2-C4-T08-S.webp"`. Pictures are in `assets/questions`.
+
+Each turn draws a random unused question from its pool and never repeats
+one. When the drink questions run out, the wheel stops landing on Mystery
+Drink. A drink question shows an **Answered** button on the team's device;
+the Admin Panel then asks the game master **Correct** or **Wrong**.
 
 ## Changing the rules
 

@@ -185,6 +185,7 @@ function run(fb) {
       ? `${r.outcome} (${fmtPoints(r.points)}${r.target && r.targetPoints ? `, ${G.teamName(r.target)} ${fmtPoints(r.targetPoints)}` : ""})`
       : live.target ? `Robbing ${G.teamName(live.target)}` : "—";
     renderDrink();
+    renderJudge();
     $("#nowPlaying").innerHTML = `
       <dl class="kv">
         <div><dt>Team</dt><dd>${live.activeTeam ? esc(G.teamName(live.activeTeam)) : "—"}</dd></div>
@@ -194,10 +195,13 @@ function run(fb) {
       </dl>
       ${q ? `
         <div class="admin-q">
-          <p class="overline muted">Current question · ${esc(DIFFICULTY_LABEL[q.difficulty] ?? q.difficulty)} · ${q.seconds}s · pool "${esc(q.pool)}"</p>
+          <p class="overline muted">${esc(q.id)} · ${esc(q.category || DIFFICULTY_LABEL[q.difficulty] || q.pool)} · ${q.seconds}s</p>
           <p class="admin-q__text">${esc(q.text)}</p>
-          <ol class="admin-q__choices">${q.choices.map((c, i) =>
-            `<li class="${full && full.answer === i ? "is-answer" : ""}">${G.letter(i)}. ${esc(c)}${full && full.answer === i ? " ✓" : ""}</li>`).join("")}</ol>
+          ${q.image ? `<img class="admin-q__img" src="${esc(q.image)}" alt="">` : ""}
+          ${q.open
+            ? `<p class="admin-q__open">Answer: <strong>${esc(full?.answerText ?? "?")}</strong></p>`
+            : `<ol class="admin-q__choices">${q.choices.map((c, i) =>
+              `<li class="${full && full.answer === i ? "is-answer" : ""}">${G.letter(i)}. ${esc(c)}${full && full.answer === i ? " ✓" : ""}</li>`).join("")}</ol>`}
         </div>` : ""}`;
   }
 
@@ -220,7 +224,7 @@ function run(fb) {
   async function confirmDrink() {
     if (live?.phase !== "drink") return;
     $("#btnDrink").disabled = true;
-    const q = G.drawQuestion(bank, used, live.round, "drink");
+    const q = G.drawQuestion(bank, used, null, "drink");
     const turnId = live.turnId;
     try {
       const next = await transactLive(db, (s) => G.confirmDrink(s, fb.now(), turnId, q));
@@ -235,6 +239,41 @@ function run(fb) {
     }
   }
   $("#btnDrink").addEventListener("click", confirmDrink);
+
+  // ---------- Judging an answer given out loud ----------
+
+  // Opens on its own once the team presses Answered, with the right answer
+  // (only this panel can read it), and closes when the verdict is in.
+  const judgeDialog = $("#judgeDialog");
+  judgeDialog.addEventListener("cancel", (e) => e.preventDefault());
+  function renderJudge() {
+    const waiting = live?.phase === "judge" && live.status === "running";
+    if (waiting) {
+      const full = bank.find((b) => b.id === live.question?.id);
+      $("#judgeTeam").textContent = G.teamName(live.activeTeam);
+      $("#judgeQuestion").textContent = live.question?.text ?? "";
+      $("#judgeAnswer").textContent = full?.answerText ?? "(not in the question file)";
+      $("#btnJudgeRight").disabled = $("#btnJudgeWrong").disabled = false;
+      if (!judgeDialog.open) judgeDialog.showModal();
+    } else if (judgeDialog.open) {
+      judgeDialog.close();
+    }
+  }
+  async function judgeAnswer(correct) {
+    if (live?.phase !== "judge") return;
+    $("#btnJudgeRight").disabled = $("#btnJudgeWrong").disabled = true;
+    const turnId = live.turnId;
+    const text = bank.find((b) => b.id === live.question?.id)?.answerText ?? null;
+    try {
+      const next = await transactLive(db, (s) => G.judge(s, fb.now(), turnId, correct, text));
+      if (next) logEvent(db, `R${next.round} · ${G.teamName(next.activeTeam)} ${correct ? "correct" : "wrong"} (Mystery Drink) ${fmtPoints(next.result.points)}`);
+    } catch (e) {
+      toast(e.message, "error");
+      $("#btnJudgeRight").disabled = $("#btnJudgeWrong").disabled = false;
+    }
+  }
+  $("#btnJudgeRight").addEventListener("click", () => judgeAnswer(true));
+  $("#btnJudgeWrong").addEventListener("click", () => judgeAnswer(false));
 
   // ---------- Scores ----------
 
@@ -389,7 +428,7 @@ function run(fb) {
       if (!res.ok) throw new Error();
       await uploadBank(await res.json(), "placeholder file");
     } catch {
-      toast("Couldn't load questions/questions.json. Use Upload file instead.", "error");
+      toast("There's no questions/questions.json here. Use Upload file… instead.", "error");
     }
   }
   $("#btnSample").addEventListener("click", loadSample);
@@ -405,30 +444,28 @@ function run(fb) {
       $("#bank").innerHTML = `<p class="empty">No questions uploaded yet.</p>`;
       return;
     }
-    const pools = ["normal", "drink"];
-    const label = (p) => (p === "normal" ? "Normal (every question)" : "🧪 Mystery Drink (quick)");
-    const count = (r, p) => {
-      const all = bank.filter((q) => q.round === r && q.pool === p);
-      const left = all.filter((q) => !used[q.id]).length;
-      return { all: all.length, left };
-    };
     const teams = live && live.status !== "lobby"
       ? G.playersOf(live).length
       : Object.keys(claims).length || TEAMS.length;
     const need = teams * QUESTIONS_PER_TEAM;
+    // What each pool may have to supply in one game.
+    const rows = [
+      ...ROUNDS.flatMap((r) => (r.choices.includes("safe")
+        ? [{ label: `Round ${r.number} · 🛡️ Safe`, round: r.number, pool: "safe", need },
+          { label: `Round ${r.number} · 🔥 Risk it`, round: r.number, pool: "risk", need }]
+        : [{ label: `Round ${r.number}`, round: r.number, pool: "normal", need }])),
+      { label: "🧪 Mystery Drink", round: null, pool: "drink", need: 0 },
+      { label: "⚔️ Sudden death", round: null, pool: "tiebreak", need: 0 },
+    ];
     $("#bank").innerHTML = `
-      <p class="muted">${bank.length} questions · ${Object.keys(used).length} used. Each cell shows <strong>unused / total</strong>. With ${teams} ${teams === 1 ? "team" : "teams"}, a pool can be asked up to ${need} times per round; orange means fewer are left.</p>
+      <p class="muted">${bank.length} questions · ${Object.keys(used).length} used. With ${teams} ${teams === 1 ? "team" : "teams"}, each round asks up to ${need}; orange means a pool has fewer left. When the drink questions run out, the wheel stops landing on Mystery Drink.</p>
       <div class="table-scroll"><table class="table table--bank">
-        <thead><tr><th>Pool</th>${ROUNDS.map((r) => `<th class="num">Round ${r.number}</th>`).join("")}</tr></thead>
-        <tbody>${pools.map((p) => `
-          <tr><td>${esc(label(p))}</td>${ROUNDS.map((r) => {
-            const c = count(r.number, p);
-            const relevant = p === "normal" || r.choices.includes("risk");
-            if (!relevant && !c.all) return `<td class="num muted">·</td>`;
-            // A drink comes up on about 1 spin in 5, so a few are enough.
-            const warn = relevant && c.left < (p === "drink" ? Math.ceil(need / 4) : need);
-            return `<td class="num ${warn ? "warn" : ""}">${c.left} / ${c.all}</td>`;
-          }).join("")}</tr>`).join("")}</tbody>
+        <thead><tr><th>Pool</th><th class="num">Unused / total</th></tr></thead>
+        <tbody>${rows.map((r) => {
+          const all = bank.filter((q) => q.pool === r.pool && (r.round == null || q.round === r.round));
+          const left = all.filter((q) => !used[q.id]).length;
+          return `<tr><td>${esc(r.label)}</td><td class="num ${left < r.need ? "warn" : ""}">${left} / ${all.length}</td></tr>`;
+        }).join("")}</tbody>
       </table></div>`;
   }
 
@@ -460,12 +497,15 @@ function run(fb) {
     // Presses the buttons for the active team when no device has joined it.
     const bot = () => {
       const s = live;
-      if (!botsOn || !s || s.status !== "running" || !s.activeTeam || claims[s.activeTeam]) return;
-      if (!["ready", "choose", "target", "drink", "question"].includes(s.phase)) return;
+      if (!botsOn || !s || s.status !== "running" || !s.activeTeam) return;
+      // The game master's steps (drink, judging) are played for every team;
+      // the team's own buttons only for teams with no device.
+      if (claims[s.activeTeam] && !["drink", "judge"].includes(s.phase)) return;
+      if (!["ready", "choose", "target", "drink", "judge", "question"].includes(s.phase)) return;
       const key = `${s.turnId}:${s.phase}`;
       if (planned.has(key)) return;
       planned.add(key);
-      const delay = { ready: 1200, choose: 1500, target: 1500, drink: 2000, question: 2500 + Math.random() * 3000 }[s.phase];
+      const delay = { ready: 1200, choose: 1500, target: 1500, drink: 2000, judge: 1500, question: 2500 + Math.random() * 3000 }[s.phase];
       setTimeout(() => {
         const n = live;
         if (!n || n.turnId !== s.turnId || n.phase !== s.phase || n.status !== "running") {
@@ -474,6 +514,7 @@ function run(fb) {
         }
         // The drink is confirmed here in the Admin Panel, as the game master would.
         if (s.phase === "drink") return confirmDrink();
+        if (s.phase === "judge") return judgeAnswer(Math.random() < 0.6);
         let type = "ready";
         let value = null;
         if (s.phase === "target") {
@@ -484,6 +525,8 @@ function run(fb) {
           const options = G.roundCfg(s.round).choices;
           type = "mode";
           value = options[Math.floor(Math.random() * options.length)];
+        } else if (s.phase === "question" && s.question.open) {
+          type = "answer";
         } else if (s.phase === "question") {
           const right = bank.find((q) => q.id === s.question.id)?.answer ?? 0;
           const count = s.question.choices.length;
