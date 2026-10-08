@@ -128,11 +128,12 @@ function run(fb) {
     switch (live.phase) {
       case "roundIntro": return sfx.round();
       case "ready": return sfx.turn();
+      // All In: the question appears with a cash register.
+      case "question": if (live.mode === "allin") sfx.cash(); return;
       case "spinning": return sfx.spin(Math.max(1, ((live.phaseEndsAt ?? 0) - fb.now()) / 1000));
       case "target": case "drink": return sfx.turn();
       case "reveal": return ({ correct: sfx.correct, lucky: sfx.correct, wrong: sfx.wrong, timeout: sfx.timeout })[live.result?.outcome]?.();
-      // The podium: a fanfare, then applause.
-      case "finished": sfx.win(); return sfx.applause();
+      case "finished": return sfx.win();
     }
   }
 
