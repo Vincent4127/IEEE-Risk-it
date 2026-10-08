@@ -11,7 +11,7 @@ import {
   choiceQuestion, tieIntro, resultPopHTML, showResultPop,
 } from "./views.js";
 import { wheelSVG, spin } from "./wheel.js";
-import { sfx, soundButton } from "./sound.js";
+import { sfx, soundButton, soundPrompt } from "./sound.js";
 
 const QR_LIB = "https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/+esm";
 // The address teams open: the team page next to this one.
@@ -65,6 +65,7 @@ function run(fb) {
   $("#takeOver").addEventListener("click", () => engine.takeOver());
 
   soundButton($("#soundBtn"));
+  soundPrompt();
   fullscreenButton($("#fullBtn"));
 
   const renderBoard = createLeaderboard($("#leaderboard"));

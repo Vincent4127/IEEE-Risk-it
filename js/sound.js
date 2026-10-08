@@ -16,7 +16,8 @@ function audio() {
     if (!Ctx) return null;
     ctx = new Ctx();
   }
-  if (ctx.state === "suspended") ctx.resume().catch(() => {});
+  // Tell the buttons and prompts once the browser has let sound start.
+  if (ctx.state === "suspended") ctx.resume().then(() => listeners.forEach((f) => f())).catch(() => {});
   return ctx;
 }
 for (const type of ["pointerdown", "keydown"]) {
@@ -32,6 +33,22 @@ export function setMuted(value) {
   listeners.forEach((f) => f());
 }
 export const onSoundChange = (f) => listeners.add(f);
+
+// A big prompt until this page may play sound: browsers keep a page silent
+// until someone clicks or presses a key on it, and the projector often gets
+// no click at all. Any click on the page (the prompt included) turns it on.
+export function soundPrompt() {
+  const el = document.createElement("button");
+  el.type = "button";
+  el.className = "sound-prompt";
+  el.innerHTML = `<span class="sound-prompt__icon" aria-hidden="true">🔊</span>
+    <span><strong>Click anywhere to turn on the game sounds</strong><br>The browser keeps this screen silent until someone clicks it.</span>`;
+  el.addEventListener("click", () => audio());
+  document.body.appendChild(el);
+  const paint = () => el.classList.toggle("is-hidden", isReady() || muted);
+  onSoundChange(paint);
+  paint();
+}
 
 function tone(freq, start, length, { type = "sine", gain = 0.18, slide = null } = {}) {
   const a = audio();
