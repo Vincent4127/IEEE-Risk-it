@@ -149,7 +149,7 @@ function play(fb, team) {
   });
   // If the game master releases this device, go back to the code screen.
   onValue(ref(fb.db, `claims/${team}`), (s) => {
-    if (s.exists() && s.val().uid !== fb.auth.currentUser?.uid) {
+    if (!s.exists() || s.val().uid !== fb.auth.currentUser?.uid) {
       writeStore(null);
       location.reload();
     }

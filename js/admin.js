@@ -284,7 +284,7 @@ function run(fb) {
   }
 
   $("#btnCodes").addEventListener("click", () => {
-    if (Object.keys(codes).length && !confirm("Make new codes? The old codes stop working. Devices already signed in stay signed in.")) return;
+    if (Object.keys(codes).length && !confirm("Make new codes? The old codes stop working, and every device is signed out: all teams show as not joined until they type their new code.")) return;
     generateCodes();
   });
 
@@ -297,8 +297,10 @@ function run(fb) {
       fresh[t.id] = c;
       lookup[c] = t.id;
     }
-    await update(ref(db), { codes: lookup, "secret/codes": fresh });
-    logEvent(db, "New team codes generated");
+    // New codes start from scratch: nobody has joined with them yet, so every
+    // device is released and goes back to the code screen.
+    await update(ref(db), { codes: lookup, "secret/codes": fresh, claims: null, roster: null });
+    logEvent(db, "New team codes generated; all devices released");
     toast("New codes ready.");
   }
 
