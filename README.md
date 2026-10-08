@@ -79,8 +79,8 @@ python serve.py
 Then open <http://localhost:8000>. `serve.py` turns the browser's caching off,
 so every refresh shows your latest changes.
 
-**Testing all 9 teams in one browser:** open `team.html?slot=1`,
-`team.html?slot=2`, … `team.html?slot=9` in separate tabs. Each slot keeps
+**Testing all the teams in one browser:** open `team.html?slot=1`,
+`team.html?slot=2`, … `team.html?slot=10` in separate tabs. Each slot keeps
 its own login.
 
 ## Before the event

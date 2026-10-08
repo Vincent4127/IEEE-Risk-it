@@ -1,7 +1,7 @@
 // ============================================================================
 //  RISK IT: GAME CONFIG
 //  Every rule of the game lives in this one file. Change a value, save,
-//  refresh the screens. Items marked "TBD" are placeholders until you decide.
+//  refresh the screens.
 // ============================================================================
 
 export const GAME_TITLE = "Risk It";
@@ -11,20 +11,22 @@ export const GAME_TITLE = "Risk It";
 // It must match the email in database.rules.json.
 export const HOST_EMAIL = "host@riskit.game";
 
-// TBD: real team names. Keep the ids (t1 … t9) as they are.
+// The teams. Each id (t1, t2 …) stays fixed; change only the names.
 export const TEAMS = [
-  { id: "t1", name: "Team 1" },
-  { id: "t2", name: "Team 2" },
-  { id: "t3", name: "Team 3" },
-  { id: "t4", name: "Team 4" },
-  { id: "t5", name: "Team 5" },
-  { id: "t6", name: "Team 6" },
-  { id: "t7", name: "Team 7" },
-  { id: "t8", name: "Team 8" },
-  { id: "t9", name: "Team 9" },
+  { id: "t1", name: "Packet Sniffers" },
+  { id: "t2", name: "FTZ" },
+  { id: "t3", name: "Goodfellas" },
+  { id: "t4", name: "فادي العفوي" },
+  { id: "t5", name: "Tirashrash" },
+  { id: "t6", name: "لاعبين اللعبة" },
+  { id: "t7", name: "Riemann Team" },
+  { id: "t8", name: "AADL" },
+  { id: "t9", name: "maressa" },
+  { id: "t10", name: "on god" },
 ];
 
-// Questions each team answers per round. 9 teams × 4 = 36 turns per round.
+// Questions each team answers per round. With 10 teams that is up to 40
+// turns per round (only the teams that join take turns).
 export const QUESTIONS_PER_TEAM = 4;
 
 // Rounds, from "Risk It - Scoring & Risk Wheel Weights" (the PDF).
