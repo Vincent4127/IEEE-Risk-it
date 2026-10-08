@@ -5,7 +5,7 @@
 import {
   connect, ref, onValue, set, update, remove, runTransaction, serverTimestamp,
 } from "./firebase.js";
-import { HOST_EMAIL, TEAMS, ROUNDS, QUESTIONS_PER_TEAM } from "./config.js";
+import { HOST_EMAIL, TEAMS, ROUNDS, QUESTIONS_PER_TEAM, MODE_LABELS } from "./config.js";
 import { transactLive, logEvent } from "./engine.js";
 import { soundButton, soundPrompt, createMomentSounds, watchTicks } from "./sound.js";
 import * as G from "./game.js";
@@ -173,7 +173,7 @@ function run(fb) {
       lobby: "Waiting to start",
       roundIntro: live.tiebreak ? "Sudden death title card" : `Round ${live.round} title card`,
       ready: "Waiting for Ready",
-      choose: G.roundCfg(live.round).choices.includes("allin") ? "Choosing Normal / All In" : "Choosing Safe / Risk it",
+      choose: `Choosing ${G.roundCfg(live.round).choices.map((m) => MODE_LABELS[m]).join(" / ")}`,
       spinning: "Wheel spinning",
       target: "🏴‍☠️ Choosing who to rob",
       drink: "🧪 Mystery drink: waiting for you",

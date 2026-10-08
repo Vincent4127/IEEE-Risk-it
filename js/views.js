@@ -1,6 +1,6 @@
 // Pieces of markup shared by the Main Display and the team screens.
 
-import { WHEEL, MODE_HINTS, MODE_LABELS, MODE_EMOJI, ALL_IN, ROUNDS, QUESTIONS_PER_TEAM } from "./config.js";
+import { WHEEL, MODE_HINTS, MODE_LABELS, MODE_EMOJI, ALL_IN, STEAL, ROUNDS, QUESTIONS_PER_TEAM } from "./config.js";
 import { roundCfg, teamName, teamNumber, letter, modeLabel, questionNumber, ranking, initials, turnsPerRound } from "./game.js";
 import { esc, fmtPoints, standings, medalSVG } from "./ui.js";
 
@@ -102,11 +102,21 @@ function stakeText(round, m) {
   const base = roundCfg(round).base;
   if (m === "safe" || m === "normal") return `+${base} if right`;
   if (m === "allin") return `+${ALL_IN.correct} if right · ${ALL_IN.wrong} if wrong`;
+  if (m === "steal") return `You +${STEAL.correct}, them ${STEAL.targetCorrect} · wrong: them +${STEAL.targetWrong}`;
   return "";
 }
 
 // "Safe or Risk it?" / "Normal or All In?"
-export const choiceQuestion = (round) => `${roundCfg(round).choices.map((m) => MODE_LABELS[m]).join(" or ")}?`;
+export const choiceQuestion = (round) => {
+  const names = roundCfg(round).choices.map((m) => MODE_LABELS[m]);
+  return `${names.length > 2 ? `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}` : names.join(" or ")}?`;
+};
+
+// What's at stake on a steal (Steal 2 on the wheel, or Steal 4 in Round 4).
+export function stealTerms(live) {
+  const t = live.mode === "steal" ? STEAL : WHEEL.find((w) => w.kind === "steal");
+  return { label: live.mode === "steal" ? STEAL.label : t.label, win: t.correct, take: -t.targetCorrect, give: t.targetWrong };
+}
 
 // The choice cards: Safe 🛡️ / Risk it 🔥 (red) in Rounds 2 and 3, Normal 🛡️ /
 // All In 💰 (green) in Round 4.

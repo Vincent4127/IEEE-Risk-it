@@ -115,7 +115,8 @@ The scoring follows *Risk It - Scoring & Risk Wheel Weights*:
 | 2 and 3 | 🛡️ Safe | +1 | 0 |
 | 2 and 3 | 🔥 Risk it: spin the wheel first | see below | see below |
 | 4 | 🛡️ Normal | +1 | 0 |
-| 4 | 💰 All In (same question) | +4 | −4 |
+| 4 | 🏴‍☠️ Steal 4: pick a target, then a leftover Round 2 or 3 question | +4, target −4 | target +2 |
+| 4 | 💰 All In (same question) | +5 | −5 |
 
 | Wheel | Chance | Right | Wrong or no answer |
 | --- | --- | --- | --- |

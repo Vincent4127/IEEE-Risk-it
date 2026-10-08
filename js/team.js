@@ -11,7 +11,7 @@ import { $, esc, toast, createLeaderboard, startCountdown, standings } from "./u
 import {
   choicesHTML, verdictHTML, questionTags, teamChip, modeCardsHTML,
   roundSummary, timerHTML, wheelResultLabel, podiumHTML, possessive, winnerText,
-  tieIntro, resultPopHTML, showResultPop, questionCardHTML, openNoteHTML,
+  tieIntro, resultPopHTML, showResultPop, questionCardHTML, openNoteHTML, stealTerms,
 } from "./views.js";
 import { wheelSVG, spin } from "./wheel.js";
 import { sfx, soundButton, createMomentSounds } from "./sound.js";
@@ -281,7 +281,7 @@ function play(fb, team) {
     const upNext = nextUp.startsWith("You're up next");
     const robbed = live.target === team && (live.phase === "question" || live.phase === "reveal");
     const banner = robbed
-      ? `<div class="get-ready get-ready--robbed" role="status"><span class="get-ready__title">🏴‍☠️ ${esc(n)} is robbing you!</span><span class="get-ready__sub">Right answer: you lose 2. Wrong: you get +1.</span></div>`
+      ? `<div class="get-ready get-ready--robbed" role="status"><span class="get-ready__title">🏴‍☠️ ${esc(n)} is robbing you!</span><span class="get-ready__sub">Right answer: you lose ${stealTerms(live).take}. Wrong: you get +${stealTerms(live).give}.</span></div>`
       : upNext
         ? `<div class="get-ready" role="status"><span class="get-ready__title">You're next. Get ready!</span><span class="get-ready__sub">Your turn starts as soon as ${esc(n)} finishes.</span></div>`
         : "";
@@ -303,7 +303,7 @@ function play(fb, team) {
         <p class="wheel-result">${esc(wheelResultLabel(live))}</p>
         ${resultPopHTML(live)}`;
     } else if (live.phase === "target") {
-      body = `<div class="moment"><span class="big-emoji" aria-hidden="true">🏴‍☠️</span><p class="moment__title">Steal 2!</p><p class="moment__sub">${esc(n)} is choosing who to rob. It could be you.</p></div>`;
+      body = `<div class="moment"><span class="big-emoji" aria-hidden="true">🏴‍☠️</span><p class="moment__title">${esc(stealTerms(live).label)}!</p><p class="moment__sub">${esc(n)} is choosing who to rob. It could be you.</p></div>`;
     } else if (live.phase === "drink") {
       body = `<div class="moment"><span class="big-emoji" aria-hidden="true">🧪</span><p class="moment__title">Mystery Drink!</p><p class="moment__sub">${esc(n)} is taking the drink.</p></div>`;
     } else if (live.phase === "reveal" && live.result?.outcome === "lucky") {
@@ -362,14 +362,15 @@ function play(fb, team) {
             <p class="wheel-result">${esc(wheelResultLabel(live))}</p>
             ${resultPopHTML(live)}
           </div>`;
-      // Steal 2: pick any other playing team; they can go below zero.
+      // Steal 2 or Steal 4: pick any other playing team; they can go below zero.
       case "target": {
+        const st = stealTerms(live);
         const chosen = sent("target");
         return `
           <div class="decide">
             <p class="big-emoji" aria-hidden="true">🏴‍☠️</p>
-            <h1 class="title-lg">Steal 2! Choose who to rob</h1>
-            <p class="lede decide__lede">Right answer: you +2, them −2. Wrong: they get +1.</p>
+            <h1 class="title-lg">${esc(st.label)}! Choose who to rob</h1>
+            <p class="lede decide__lede">Right answer: you +${st.win}, them −${st.take}. Wrong: they get +${st.give}.</p>
             <div class="target-pick">${playersOf(live).filter((id) => id !== team).map((id) => `
               <button class="target-btn ${chosen && action.value === id ? "is-chosen" : ""}" type="button" data-target="${id}" ${chosen || sending ? "disabled" : ""}>
                 <span class="target-btn__name">${esc(teamName(id))}</span>

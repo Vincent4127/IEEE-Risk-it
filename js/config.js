@@ -39,7 +39,7 @@ export const ROUNDS = [
   { number: 1, difficulty: "easy",   base: 1, wrong: 0, choices: [], seconds: 10 },
   { number: 2, difficulty: "medium", base: 1, wrong: 0, choices: ["safe", "risk"], seconds: 10 },
   { number: 3, difficulty: "hard",   base: 1, wrong: 0, choices: ["safe", "risk"], seconds: 15 },
-  { number: 4, difficulty: "expert", base: 1, wrong: 0, choices: ["normal", "allin"], seconds: 15 },
+  { number: 4, difficulty: "expert", base: 1, wrong: 0, choices: ["normal", "steal", "allin"], seconds: 15 },
 ];
 
 // Seconds on the clock when a question has no "seconds" of its own (every
@@ -95,7 +95,12 @@ export const WHEEL = [
 ];
 
 // Round 4: All In uses the same question as Normal.
-export const ALL_IN = { label: "All In", correct: 4, wrong: -4 };
+export const ALL_IN = { label: "All In", correct: 5, wrong: -5 };
+
+// Round 4: Steal 4. The team picks a target, then answers an unused Round 2
+// or 3 question (Round 4 only if those run out). Right: the team +4, the
+// target −4. Wrong or no answer: the target +2.
+export const STEAL = { label: "Steal 4", correct: 4, wrong: 0, targetCorrect: -4, targetWrong: 2 };
 
 // The cards a team picks from, with their emoji.
 export const MODE_LABELS = {
@@ -103,13 +108,15 @@ export const MODE_LABELS = {
   safe: "Safe",
   risk: "Risk it",
   normal: "Normal",
+  steal: "Steal 4",
   allin: "All In",
 };
-export const MODE_EMOJI = { safe: "🛡️", risk: "🔥", normal: "🛡️", allin: "💰" };
+export const MODE_EMOJI = { safe: "🛡️", risk: "🔥", normal: "🛡️", steal: "🏴‍☠️", allin: "💰" };
 export const MODE_HINTS = {
   safe: "Normal question, nothing to lose",
   risk: "Spin the wheel before the question",
   normal: "Same question, nothing to lose",
+  steal: "Rob another team",
   allin: "Same question, all or nothing",
 };
 

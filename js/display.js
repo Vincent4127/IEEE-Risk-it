@@ -8,7 +8,7 @@ import { $, esc, toast, createLeaderboard, startCountdown, hostLogin } from "./u
 import {
   choicesHTML, verdictHTML, questionTags, teamChip, modeCardsHTML,
   roundSummary, timerHTML, wheelResultLabel, podiumHTML, possessive, winnerText,
-  choiceQuestion, tieIntro, resultPopHTML, showResultPop, questionCardHTML, openNoteHTML,
+  choiceQuestion, tieIntro, resultPopHTML, showResultPop, questionCardHTML, openNoteHTML, stealTerms,
 } from "./views.js";
 import { wheelSVG, spin } from "./wheel.js";
 import { sfx, soundButton, soundPrompt, createMomentSounds } from "./sound.js";
@@ -209,18 +209,20 @@ function run(fb) {
             ${resultPopHTML(live)}
           </div>`;
 
-      // Steal 2: the team is picking who to rob.
-      case "target":
+      // Steal 2 (wheel) or Steal 4 (Round 4): the team is picking who to rob.
+      case "target": {
+        const st = stealTerms(live);
         return `
           <div class="stage__center">
             ${teamChip(live.activeTeam)}
             <p class="big-emoji" aria-hidden="true">🏴‍☠️</p>
-            <h1 class="title-lg">Steal 2!</h1>
+            <h1 class="title-lg">${esc(st.label)}!</h1>
             <p class="lede">${name} is choosing who to rob<span class="dots"></span></p>
             <ul class="targets">${playersOf(live).filter((id) => id !== live.activeTeam).map((id) => `
               <li class="target"><span class="target__name">${esc(teamName(id))}</span><span class="target__pts">${live.scores?.[id] ?? 0} pts</span></li>`).join("")}</ul>
-            <p class="muted">Right answer: ${name} +2, the robbed team −2. Wrong: the robbed team +1.</p>
+            <p class="muted">Right answer: ${name} +${st.win}, the robbed team −${st.take}. Wrong: the robbed team +${st.give}.</p>
           </div>`;
+      }
 
       // Mystery Drink: waiting for the game master to confirm the drink.
       case "drink":

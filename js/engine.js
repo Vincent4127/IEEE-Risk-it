@@ -203,14 +203,14 @@ export class Engine {
       this.run((x) => G.pressReady(x, now, a.turnId, q), (n) => this.afterQuestion(n));
     } else if (a.type === "mode" && s.phase === "choose") {
       this.handled.add(key);
-      const pick = a.value === "risk" ? this.spin() : this.draw(s.round, G.poolFor(s.round, a.value));
+      const pick = a.value === "risk" ? this.spin() : a.value === "steal" ? null : this.draw(s.round, G.poolFor(s.round, a.value));
       this.run((x) => G.chooseMode(x, now, a.turnId, a.value, pick), (n) => {
         this.afterQuestion(n);
         if (n.wheel) logEvent(this.db, `R${n.round} · ${G.teamName(n.activeTeam)} spun ${WHEEL[n.wheel.segment].label}`);
       });
     } else if (a.type === "target" && s.phase === "target") {
       this.handled.add(key);
-      const q = this.draw(s.round, "risk");
+      const q = this.draw(s.round, s.mode === "steal" ? "steal" : "risk");
       this.run((x) => G.chooseTarget(x, now, a.turnId, String(a.value), q), (n) => {
         this.afterQuestion(n);
         logEvent(this.db, `R${n.round} · ${G.teamName(n.activeTeam)} is robbing ${G.teamName(n.target)}`);

@@ -10,7 +10,7 @@
 
 import {
   TEAMS, ROUNDS, QUESTIONS_PER_TEAM, TIMERS, DURATIONS,
-  WHEEL, ALL_IN, MODE_LABELS, MODE_EMOJI, tieBreak,
+  WHEEL, ALL_IN, STEAL, MODE_LABELS, MODE_EMOJI, tieBreak,
 } from "./config.js";
 
 // The most turns a round can have (every configured team playing).
@@ -121,6 +121,12 @@ export function chooseMode(s, now, turnId, mode, pick) {
   if (s.status !== "running" || s.phase !== "choose" || s.turnId !== turnId) return;
   if (!roundCfg(s.round).choices.includes(mode)) return;
   s.mode = mode;
+  if (mode === "steal") {
+    // Steal 4: pick the target first; the question comes after.
+    s.phase = "target";
+    s.phaseEndsAt = null;
+    return s;
+  }
   if (mode === "risk") {
     // The wheel turns for `spin` seconds; its result then shows on every
     // screen for `result` seconds before the next step.
@@ -215,6 +221,7 @@ export function pointsFor(s, outcome) {
     };
   }
   if (s.mode === "allin") return { points: right ? ALL_IN.correct : ALL_IN.wrong, targetPoints: 0 };
+  if (s.mode === "steal") return { points: right ? STEAL.correct : STEAL.wrong, targetPoints: right ? STEAL.targetCorrect : STEAL.targetWrong };
   const r = roundCfg(s.round);
   return { points: right ? r.base : r.wrong, targetPoints: 0 };
 }
@@ -387,6 +394,7 @@ export function spinWheel(skip = []) {
 //   tiebreak  sudden death
 export const POOLS = ["normal", "safe", "risk", "drink", "tiebreak"];
 export function poolFor(round, mode, wheel) {
+  if (mode === "steal") return "steal";
   if (mode === "risk" && wheel && WHEEL[wheel.segment]?.kind === "drink") return "drink";
   if (mode === "risk") return "risk";
   if (mode === "safe") return "safe";
@@ -445,6 +453,9 @@ export function drawQuestion(bank, used, round, pool) {
   const free = (q) => !used[q.id];
   const tiers = pool === "drink"
     ? [(q) => q.pool === "drink"]
+    : pool === "steal"
+      // Steal 4: what Rounds 2 and 3 left unused, then Round 4.
+      ? [(q) => (q.round === 2 || q.round === 3) && (q.pool === "safe" || q.pool === "risk"), (q) => q.round === 4 && q.pool === "normal"]
     : pool === "tiebreak"
       ? [(q) => q.pool === "tiebreak", (q) => q.round === 4 && q.pool === "normal", (q) => !!q.choices?.length]
       : [(q) => q.round === round && q.pool === pool, (q) => q.round === round && q.pool !== "drink"];
