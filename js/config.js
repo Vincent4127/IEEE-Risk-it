@@ -38,8 +38,8 @@ export const QUESTIONS_PER_TEAM = 4;
 export const ROUNDS = [
   { number: 1, difficulty: "easy",   base: 1, wrong: 0, choices: [], seconds: 10 },
   { number: 2, difficulty: "medium", base: 1, wrong: 0, choices: ["safe", "risk"], seconds: 10 },
-  { number: 3, difficulty: "hard",   base: 1, wrong: 0, choices: ["safe", "risk"], seconds: 13 },
-  { number: 4, difficulty: "expert", base: 1, wrong: 0, choices: ["normal", "allin"], seconds: 13 },
+  { number: 3, difficulty: "hard",   base: 1, wrong: 0, choices: ["safe", "risk"], seconds: 15 },
+  { number: 4, difficulty: "expert", base: 1, wrong: 0, choices: ["normal", "allin"], seconds: 15 },
 ];
 
 // Seconds on the clock when a question has no "seconds" of its own (every
