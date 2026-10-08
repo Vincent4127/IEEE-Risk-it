@@ -79,7 +79,58 @@ function noise(start, length, { gain = 0.2, filter = "bandpass", freq = 2000, q 
   src.stop(t + length + 0.05);
 }
 
-// One sound per wheel result, starting `at` seconds from now.
+// Recorded clips in assets/sounds. They're decoded once, as soon as the page
+// loads, so they're ready by the first spin.
+// Steal 2 keeps its made pirate fanfare and sword (see RESULT below).
+const CLIPS = {
+  drumroll: "drumroll.mp3",
+  doubleornothing: "doubleornothing.mp3",
+  drink: "drink.wav",
+  lucky: "lucky.wav",
+  cash: "cash.mp3",
+};
+const clips = {};
+function loadClips() {
+  const a = audio();
+  if (!a) return;
+  for (const [name, file] of Object.entries(CLIPS)) {
+    clips[name] ??= fetch(new URL(`../assets/sounds/${file}`, import.meta.url))
+      .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject()))
+      .then((b) => a.decodeAudioData(b))
+      .catch(() => null);
+  }
+}
+loadClips();
+
+// Plays clip `name` from `start` seconds after now for at most `length`
+// seconds (looping if it's shorter), fading out at the end. Resolves false
+// when there's no such clip, so the caller can fall back to a made sound.
+async function clip(name, start, length, { gain = 0.9, loop = false } = {}) {
+  const a = audio();
+  if (!a || muted || !clips[name]) return false;
+  const t0 = a.currentTime + start;
+  const buf = await clips[name];
+  if (!buf || muted || a.state !== "running") return !!buf;
+  const at = Math.max(a.currentTime, t0);
+  const late = at - t0; // seconds lost while the clip was still loading
+  const play = length - late;
+  if (play <= 0.05) return true;
+  const src = a.createBufferSource();
+  src.buffer = buf;
+  src.loop = loop && buf.duration < length;
+  const amp = a.createGain();
+  const fade = Math.min(0.3, play / 3);
+  amp.gain.setValueAtTime(gain, at);
+  amp.gain.setValueAtTime(gain, at + play - fade);
+  amp.gain.linearRampToValueAtTime(0.0001, at + play);
+  src.connect(amp).connect(a.destination);
+  src.start(at, src.loop ? 0 : Math.min(late, buf.duration));
+  src.stop(at + play + 0.05);
+  return true;
+}
+
+// Made-in-the-browser sounds for results with no recorded clip (and as a
+// fallback if a clip fails to load), starting `at` seconds from now.
 const RESULT = {
   // Two shakes of the dice, then a tense rising tone.
   doubleornothing: (at) => {
@@ -118,6 +169,13 @@ const RESULT = {
   },
 };
 
+// Suspense when a team picks Risk it: a dark, swelling chord that rises,
+// with a tremolo on top, about 1.4 seconds.
+function suspense(at) {
+  for (const [f, to] of [[98, 131], [104, 139], [147, 196]]) tone(f, at, 1.4, { type: "sawtooth", gain: 0.06, slide: to });
+  for (let i = 0; i < 12; i++) tone(587, at + 0.2 + i * 0.09, 0.08, { type: "triangle", gain: 0.012 + i * 0.004 });
+}
+
 export const sfx = {
   // The last five seconds of a question; the final second is higher.
   tick: (secs) => tone(secs <= 1 ? 1320 : 990, 0, 0.09, { type: "square", gain: 0.07 }),
@@ -132,40 +190,28 @@ export const sfx = {
     tone(1319, 0.13, 0.28, { type: "triangle", gain: 0.15 });
   },
   round: () => notes([392, 523, 659, 784], 0.13, { type: "triangle", gain: 0.15, length: 0.4 }),
-  // The whole Risk it spin, `seconds` long: a low "dun-dun", a snare roll
-  // that builds under clicks slowing down with the wheel, a cymbal crash as
-  // it lands, then the sound of the result it landed on (`id` from WHEEL).
-  wheel: (seconds, id) => {
-    const land = Math.max(0.6, seconds - 0.4); // the wheel stops 0.4 s early
-    for (const at of [0, 0.3]) {
-      tone(110, at, 0.28, { type: "sawtooth", gain: 0.14, slide: 70 });
-      noise(at, 0.12, { gain: 0.16, filter: "lowpass", freq: 300 });
-    }
-    for (let t = 0.6; t < land - 0.03; t += 0.045) {
-      const build = 0.04 + 0.2 * ((t - 0.6) / Math.max(0.1, land - 0.6));
-      noise(t, 0.05, { gain: build, freq: 1800, q: 0.7 });
-    }
-    let t = 0.6;
-    let gap = 0.05;
-    while (t < land - 0.1) {
-      tone(1700, t, 0.025, { type: "square", gain: 0.03 });
-      t += gap;
-      gap *= 1.07;
-    }
-    noise(land, 1.6, { gain: 0.28, filter: "highpass", freq: 5000, q: 0.5 });
-    tone(82, land, 0.5, { type: "sine", gain: 0.25, slide: 50 });
-    RESULT[id]?.(land + 0.15);
+  // The whole Risk it spin: a suspense swell, the drum roll until the wheel
+  // lands `land` seconds from now, then the clip for the result it landed on
+  // (`id` from WHEEL) while the result shows, `show` seconds.
+  wheel: (land, id, show = 3) => {
+    land = Math.max(0.6, land);
+    suspense(0);
+    const rollFrom = Math.min(0.9, land / 2);
+    clip("drumroll", rollFrom, land - rollFrom, { gain: 0.8, loop: true }).then((ok) => {
+      if (!ok) for (let t = rollFrom; t < land - 0.03; t += 0.045) noise(t, 0.05, { gain: 0.04 + 0.2 * ((t - rollFrom) / (land - rollFrom)), freq: 1800, q: 0.7 });
+    });
+    clip(id, land, show).then((ok) => { if (!ok) RESULT[id]?.(land); });
   },
-  // A cash register for All In: the drawer bell "ka-ching", then coins.
-  cash: () => {
+  // A cash register for All In: the recorded "ka-ching", or a made one if
+  // the clip can't play.
+  cash: () => clip("cash", 0, 2.5).then((ok) => {
+    if (ok) return;
     tone(1568, 0, 0.09, { type: "square", gain: 0.06 });
     tone(2637, 0.08, 0.7, { type: "triangle", gain: 0.2 });
     tone(3951, 0.08, 0.5, { type: "sine", gain: 0.08 });
     tone(2093, 0.1, 0.6, { type: "triangle", gain: 0.1 });
-    for (let i = 0; i < 7; i++) {
-      tone(3200 + Math.random() * 1600, 0.32 + i * 0.055 + Math.random() * 0.02, 0.07, { type: "sine", gain: 0.06 });
-    }
-  },
+    for (let i = 0; i < 7; i++) tone(3200 + Math.random() * 1600, 0.32 + i * 0.055, 0.07, { type: "sine", gain: 0.06 });
+  }),
   win: () => {
     notes([523, 659, 784], 0.14, { type: "triangle", gain: 0.16, length: 0.3 });
     notes([1047, 1047, 1319, 1568], 0.12, { type: "triangle", gain: 0.17, length: 0.5 });

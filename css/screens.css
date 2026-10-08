@@ -1281,3 +1281,53 @@ button.choice { font: inherit; }
 .drink-dialog .h2 { color: var(--blue-900); margin-top: var(--space-2); }
 .drink-dialog__team { color: var(--color-brand); font-family: var(--font-display); font-size: 24px; font-weight: var(--weight-bold); margin: var(--space-1) 0 var(--space-3); }
 .drink-dialog .btn { margin-top: var(--space-5); }
+
+
+/* ==========================================================================
+   The wheel's result: big, in the middle, over a blurred dark screen
+   ========================================================================== */
+
+.result-pop {
+  align-items: center;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  background: rgb(4 12 26 / .72);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  opacity: 0;
+  padding: var(--space-6);
+  pointer-events: none;
+  position: fixed;
+  transition: opacity 250ms var(--ease-out);
+  visibility: hidden;
+  z-index: 500;
+}
+.result-pop.is-shown { opacity: 1; pointer-events: auto; visibility: visible; }
+.result-pop__card {
+  align-items: center;
+  background: var(--gray-0);
+  border-radius: 28px;
+  border-top: 10px solid var(--seg);
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--seg) 45%, transparent), 0 40px 100px rgb(0 0 0 / .5);
+  color: var(--blue-900);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: min(92vw, 760px);
+  padding: clamp(28px, 4vw, 56px) clamp(28px, 5vw, 72px);
+  text-align: center;
+  transform: scale(.6);
+  transition: transform 450ms cubic-bezier(.2, 1.4, .4, 1);
+}
+.result-pop.is-shown .result-pop__card { transform: none; }
+.result-pop__emoji {
+  font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+  font-size: clamp(80px, 11vw, 170px);
+  line-height: 1;
+}
+.result-pop__label { font-family: var(--font-display); font-size: clamp(36px, 5vw, 76px); font-weight: var(--weight-bold); line-height: 1.05; }
+.result-pop__line { color: var(--color-text-muted); font-size: clamp(17px, 1.8vw, 28px); font-weight: var(--weight-medium); }
+@media (prefers-reduced-motion: reduce) {
+  .result-pop, .result-pop__card { transition: none; }
+}

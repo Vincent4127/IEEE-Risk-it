@@ -5,13 +5,13 @@
 // Each slot keeps its own login.
 
 import { connect, ref, onValue, get, set, serverTimestamp } from "./firebase.js";
-import { ROUNDS, TEAMS, WHEEL } from "./config.js";
+import { ROUNDS, TEAMS, WHEEL, DURATIONS } from "./config.js";
 import { teamName, ranking, roundCfg, questionNumber, initials, playersOf, turnsPerRound } from "./game.js";
 import { $, esc, toast, createLeaderboard, startCountdown, standings } from "./ui.js";
 import {
   choicesHTML, verdictHTML, questionTags, teamChip, modeCardsHTML,
   roundSummary, timerHTML, wheelResultLabel, podiumHTML, possessive, winnerText,
-  tieIntro,
+  tieIntro, resultPopHTML, showResultPop,
 } from "./views.js";
 import { wheelSVG, spin } from "./wheel.js";
 import { sfx, soundButton } from "./sound.js";
@@ -229,7 +229,10 @@ function play(fb, team) {
     switch (live.phase) {
       case "ready": return sfx.turn();
       case "question": if (live.mode === "allin") sfx.cash(); return;
-      case "spinning": return sfx.wheel(Math.max(1, ((live.phaseEndsAt ?? 0) - fb.now()) / 1000), WHEEL[live.wheel?.segment]?.id);
+      case "spinning": {
+        const land = ((live.wheel?.landsAt ?? (live.phaseEndsAt ?? 0) - 400) - fb.now()) / 1000;
+        return sfx.wheel(land, WHEEL[live.wheel?.segment]?.id, DURATIONS.result);
+      }
       case "reveal": return ({ correct: sfx.correct, lucky: sfx.correct, wrong: sfx.wrong, timeout: sfx.timeout })[live.result?.outcome]?.();
     }
   }
@@ -313,7 +316,8 @@ function play(fb, team) {
     } else if (live.phase === "spinning") {
       body = `
         <div class="wheel-wrap wheel-wrap--sm">${wheelSVG()}</div>
-        <p class="wheel-result">${esc(wheelResultLabel(live))}</p>`;
+        <p class="wheel-result">${esc(wheelResultLabel(live))}</p>
+        ${resultPopHTML(live)}`;
     } else if (live.phase === "target") {
       body = `<div class="moment"><span class="big-emoji" aria-hidden="true">🏴‍☠️</span><p class="moment__title">Steal 2!</p><p class="moment__sub">${esc(n)} is choosing who to rob. It could be you.</p></div>`;
     } else if (live.phase === "drink") {
@@ -371,6 +375,7 @@ function play(fb, team) {
             <h1 class="title-md">Spinning the wheel…</h1>
             <div class="wheel-wrap">${wheelSVG()}</div>
             <p class="wheel-result">${esc(wheelResultLabel(live))}</p>
+            ${resultPopHTML(live)}
           </div>`;
       // Steal 2: pick any other playing team; they can go below zero.
       case "target": {
@@ -466,7 +471,7 @@ function play(fb, team) {
       );
     }
     const wheel = stage.querySelector(".wheel");
-    if (wheel && live.wheel) spin(wheel, live.wheel.segment, live.wheel.spinId, live.phaseEndsAt ?? 0, fb.now());
+    if (wheel && live.wheel) spin(wheel, live.wheel.segment, live.wheel.spinId, live.wheel.landsAt ?? (live.phaseEndsAt ?? 0) - 400, fb.now(), () => showResultPop(stage));
   }
 }
 

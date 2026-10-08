@@ -70,15 +70,18 @@ export function landingAngle(segment, spinId) {
   return TURNS * 360 + (360 - at);
 }
 
-// Spins `el` (the element from wheelSVG) so it lands at `endsAt` (server ms).
-export function spin(el, segment, spinId, endsAt, now) {
+// Spins `el` (the element from wheelSVG) so it lands at `landsAt` (server
+// ms), then calls `onLand`. A screen that opens after the landing shows the
+// wheel already stopped.
+export function spin(el, segment, spinId, landsAt, now, onLand = () => {}) {
   const disc = el.querySelector(".wheel__disc");
   const final = landingAngle(segment, spinId);
-  const remaining = endsAt - now - 400; // land a moment before the phase ends
+  const remaining = landsAt - now;
   if (remaining < 600) {
     disc.style.transition = "none";
     disc.style.transform = `rotate(${final}deg)`;
     el.classList.add("wheel--landed");
+    onLand();
     return;
   }
   disc.style.transition = "none";
@@ -86,5 +89,5 @@ export function spin(el, segment, spinId, endsAt, now) {
   disc.getBoundingClientRect(); // restart from zero
   disc.style.transition = `transform ${remaining}ms cubic-bezier(.12,.75,.15,1)`;
   disc.style.transform = `rotate(${final}deg)`;
-  setTimeout(() => el.classList.add("wheel--landed"), remaining);
+  setTimeout(() => { el.classList.add("wheel--landed"); onLand(); }, remaining);
 }

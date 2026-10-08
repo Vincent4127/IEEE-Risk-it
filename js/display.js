@@ -1,14 +1,14 @@
 // Main Display (projector). Shows the game and runs the engine.
 
 import { connect, ref, onValue, set } from "./firebase.js";
-import { HOST_EMAIL, TEAMS, ROUNDS, QUESTIONS_PER_TEAM, WHEEL } from "./config.js";
+import { HOST_EMAIL, TEAMS, ROUNDS, QUESTIONS_PER_TEAM, WHEEL, DURATIONS } from "./config.js";
 import { Engine } from "./engine.js";
 import { teamName, initials, questionNumber, turnsPerRound, playersOf } from "./game.js";
 import { $, esc, toast, createLeaderboard, startCountdown, hostLogin } from "./ui.js";
 import {
   choicesHTML, verdictHTML, questionTags, teamChip, modeCardsHTML,
   roundSummary, timerHTML, wheelResultLabel, podiumHTML, possessive, winnerText,
-  choiceQuestion, tieIntro,
+  choiceQuestion, tieIntro, resultPopHTML, showResultPop,
 } from "./views.js";
 import { wheelSVG, spin } from "./wheel.js";
 import { sfx, soundButton } from "./sound.js";
@@ -130,7 +130,10 @@ function run(fb) {
       case "ready": return sfx.turn();
       // All In: the question appears with a cash register.
       case "question": if (live.mode === "allin") sfx.cash(); return;
-      case "spinning": return sfx.wheel(Math.max(1, ((live.phaseEndsAt ?? 0) - fb.now()) / 1000), WHEEL[live.wheel?.segment]?.id);
+      case "spinning": {
+        const land = ((live.wheel?.landsAt ?? (live.phaseEndsAt ?? 0) - 400) - fb.now()) / 1000;
+        return sfx.wheel(land, WHEEL[live.wheel?.segment]?.id, DURATIONS.result);
+      }
       case "target": case "drink": return sfx.turn();
       case "reveal": return ({ correct: sfx.correct, lucky: sfx.correct, wrong: sfx.wrong, timeout: sfx.timeout })[live.result?.outcome]?.();
       case "finished": return sfx.win();
@@ -222,6 +225,7 @@ function run(fb) {
             <h1 class="title-md">${name} took the risk</h1>
             <div class="wheel-wrap">${wheelSVG()}</div>
             <p class="wheel-result" data-wheel-result>${esc(wheelResultLabel(live))}</p>
+            ${resultPopHTML(live)}
           </div>`;
 
       // Steal 2: the team is picking who to rob.
@@ -316,7 +320,7 @@ function run(fb) {
     if (qr) drawQR(qr);
     const wheel = stage.querySelector(".wheel");
     if (wheel && live.wheel) {
-      spin(wheel, live.wheel.segment, live.wheel.spinId, live.phaseEndsAt ?? 0, fb.now());
+      spin(wheel, live.wheel.segment, live.wheel.spinId, live.wheel.landsAt ?? (live.phaseEndsAt ?? 0) - 400, fb.now(), () => showResultPop(stage));
     }
   }
 

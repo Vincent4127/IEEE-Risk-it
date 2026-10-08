@@ -161,6 +161,34 @@ export function winnerText(live, roster) {
   return `It's a tie! ${top.slice(0, -1).join(", ")} and ${top[top.length - 1]} share first place`;
 }
 
+// What the wheel's result means, in a line.
+function resultLine(seg) {
+  switch (seg.kind) {
+    case "steal": return `Pick a team to rob: right answer, you +${seg.correct} and them ${seg.targetCorrect}`;
+    case "drink": return `Drink first, then a quick question: +${seg.correct} if right`;
+    case "lucky": return `+${seg.correct} point, no question!`;
+    default: return seg.wrong ? `+${seg.correct} if right · ${seg.wrong} if wrong` : `+${seg.correct} if right · nothing to lose`;
+  }
+}
+
+// The wheel's result, big in the middle of the screen over a blurred, dark
+// background. It's in the page from the start of the spin, hidden, and
+// showResultPop() brings it up the moment the wheel lands; it goes when the
+// screen moves on to the next step.
+export function resultPopHTML(live) {
+  const seg = live.wheel ? WHEEL[live.wheel.segment] : null;
+  if (!seg) return "";
+  return `
+    <div class="result-pop" data-result-pop role="status" aria-live="assertive" style="--seg:${seg.color}">
+      <div class="result-pop__card">
+        <span class="result-pop__emoji" aria-hidden="true">${seg.emoji}</span>
+        <span class="result-pop__label">${esc(seg.label)}</span>
+        <span class="result-pop__line">${esc(resultLine(seg))}</span>
+      </div>
+    </div>`;
+}
+export const showResultPop = (root) => root.querySelector("[data-result-pop]")?.classList.add("is-shown");
+
 export function wheelResultLabel(live) {
   const seg = live.wheel ? WHEEL[live.wheel.segment] : null;
   return seg ? `${seg.emoji} ${seg.label}!` : "";

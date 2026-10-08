@@ -121,9 +121,11 @@ export function chooseMode(s, now, turnId, mode, pick) {
   if (!roundCfg(s.round).choices.includes(mode)) return;
   s.mode = mode;
   if (mode === "risk") {
-    s.wheel = { segment: pick.segment, spinId: pick.spinId };
+    // The wheel turns for `spin` seconds; its result then shows on every
+    // screen for `result` seconds before the next step.
+    s.wheel = { segment: pick.segment, spinId: pick.spinId, landsAt: now + DURATIONS.spin * 1000 };
     s.phase = "spinning";
-    s.phaseEndsAt = now + DURATIONS.spin * 1000;
+    s.phaseEndsAt = now + (DURATIONS.spin + DURATIONS.result) * 1000;
     return s;
   }
   return showQuestion(s, now, pick);

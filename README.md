@@ -138,6 +138,13 @@ The scoring follows *Risk It - Scoring & Risk Wheel Weights*:
 
 The points, chances and timers are all in `js/config.js`.
 
+**Sounds** are in `assets/sounds`: the drum roll, Double or Nothing (dice),
+Mystery Drink (potion), Lucky Point and the All In cash register. To change
+one, replace the file with another of the same name. Steal 2, Double and the
+Risk it suspense are made in the browser. When the wheel lands, its result
+shows in the middle of every screen for `DURATIONS.result` seconds (3)
+before the next step.
+
 ## Putting it online (optional)
 
 Firebase Hosting is free, and it's set up so the `questions/` folder is
