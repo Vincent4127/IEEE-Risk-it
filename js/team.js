@@ -5,7 +5,7 @@
 // Each slot keeps its own login.
 
 import { connect, ref, onValue, get, set, serverTimestamp } from "./firebase.js";
-import { ROUNDS, TEAMS } from "./config.js";
+import { ROUNDS, TEAMS, WHEEL } from "./config.js";
 import { teamName, ranking, roundCfg, questionNumber, initials, playersOf, turnsPerRound } from "./game.js";
 import { $, esc, toast, createLeaderboard, startCountdown, standings } from "./ui.js";
 import {
@@ -229,7 +229,7 @@ function play(fb, team) {
     switch (live.phase) {
       case "ready": return sfx.turn();
       case "question": if (live.mode === "allin") sfx.cash(); return;
-      case "spinning": return sfx.spin(Math.max(1, ((live.phaseEndsAt ?? 0) - fb.now()) / 1000));
+      case "spinning": return sfx.wheel(Math.max(1, ((live.phaseEndsAt ?? 0) - fb.now()) / 1000), WHEEL[live.wheel?.segment]?.id);
       case "reveal": return ({ correct: sfx.correct, lucky: sfx.correct, wrong: sfx.wrong, timeout: sfx.timeout })[live.result?.outcome]?.();
     }
   }

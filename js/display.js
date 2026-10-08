@@ -1,7 +1,7 @@
 // Main Display (projector). Shows the game and runs the engine.
 
 import { connect, ref, onValue, set } from "./firebase.js";
-import { HOST_EMAIL, TEAMS, ROUNDS, QUESTIONS_PER_TEAM } from "./config.js";
+import { HOST_EMAIL, TEAMS, ROUNDS, QUESTIONS_PER_TEAM, WHEEL } from "./config.js";
 import { Engine } from "./engine.js";
 import { teamName, initials, questionNumber, turnsPerRound, playersOf } from "./game.js";
 import { $, esc, toast, createLeaderboard, startCountdown, hostLogin } from "./ui.js";
@@ -130,7 +130,7 @@ function run(fb) {
       case "ready": return sfx.turn();
       // All In: the question appears with a cash register.
       case "question": if (live.mode === "allin") sfx.cash(); return;
-      case "spinning": return sfx.spin(Math.max(1, ((live.phaseEndsAt ?? 0) - fb.now()) / 1000));
+      case "spinning": return sfx.wheel(Math.max(1, ((live.phaseEndsAt ?? 0) - fb.now()) / 1000), WHEEL[live.wheel?.segment]?.id);
       case "target": case "drink": return sfx.turn();
       case "reveal": return ({ correct: sfx.correct, lucky: sfx.correct, wrong: sfx.wrong, timeout: sfx.timeout })[live.result?.outcome]?.();
       case "finished": return sfx.win();
