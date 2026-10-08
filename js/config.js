@@ -91,7 +91,7 @@ export const WHEEL = [
   { id: "drink", label: "Mystery Drink", emoji: "🧪", weight: 20, color: "#facc15", ink: "#422006",
     kind: "drink", correct: 2, wrong: 0 },
   { id: "lucky", label: "Lucky Point", emoji: "🍀", weight: 5, color: "#15803d", ink: "#ffffff",
-    kind: "lucky", correct: 1 },
+    kind: "lucky", correct: 2 },
 ];
 
 // Round 4: All In uses the same question as Normal.

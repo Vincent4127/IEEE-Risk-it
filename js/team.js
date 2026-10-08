@@ -5,7 +5,7 @@
 // Each slot keeps its own login.
 
 import { connect, ref, onValue, get, set, serverTimestamp } from "./firebase.js";
-import { ROUNDS, TEAMS } from "./config.js";
+import { ROUNDS, TEAMS, WHEEL } from "./config.js";
 import { teamName, ranking, roundCfg, questionNumber, initials, playersOf, turnsPerRound } from "./game.js";
 import { $, esc, toast, createLeaderboard, startCountdown, standings } from "./ui.js";
 import {
@@ -307,7 +307,7 @@ function play(fb, team) {
     } else if (live.phase === "drink") {
       body = `<div class="moment"><span class="big-emoji" aria-hidden="true">🧪</span><p class="moment__title">Mystery Drink!</p><p class="moment__sub">${esc(n)} is taking the drink.</p></div>`;
     } else if (live.phase === "reveal" && live.result?.outcome === "lucky") {
-      body = `<div class="moment"><span class="big-emoji" aria-hidden="true">🍀</span><p class="moment__title">Lucky Point!</p><p class="moment__sub">${esc(n)} gets +1 with no question.</p></div>`;
+      body = `<div class="moment"><span class="big-emoji" aria-hidden="true">🍀</span><p class="moment__title">Lucky Point!</p><p class="moment__sub">${esc(n)} gets +${WHEEL.find((w) => w.kind === "lucky")?.correct ?? 2} with no question.</p></div>`;
     } else if (["question", "judge", "reveal"].includes(live.phase) && live.question) {
       body = `
         <div class="qa qa--team qa--watch">

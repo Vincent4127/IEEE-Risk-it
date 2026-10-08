@@ -186,7 +186,7 @@ function resultLine(seg) {
   switch (seg.kind) {
     case "steal": return `Pick a team to rob: right answer, you +${seg.correct} and them ${seg.targetCorrect}`;
     case "drink": return `Drink first, then a quick question: +${seg.correct} if right`;
-    case "lucky": return `+${seg.correct} point, no question!`;
+    case "lucky": return `+${seg.correct} ${seg.correct === 1 ? "point" : "points"}, no question!`;
     default: return seg.wrong ? `+${seg.correct} if right · ${seg.wrong} if wrong` : `+${seg.correct} if right · nothing to lose`;
   }
 }

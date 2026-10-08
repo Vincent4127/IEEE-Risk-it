@@ -123,7 +123,7 @@ The scoring follows *Risk It - Scoring & Risk Wheel Weights*:
 | 🏴‍☠️ Steal 2 | 25% | +2, target −2 | target +1 |
 | ⚡ Double | 20% | +2 | 0 |
 | 🧪 Mystery Drink | 20% | +2 | 0 |
-| 🍀 Lucky Point | 5% | +1 at once, no question | |
+| 🍀 Lucky Point | 5% | +2 at once, no question | |
 
 - **Steal 2:** the team picks any other playing team on its device before
   the question. The target can go to zero or below.
