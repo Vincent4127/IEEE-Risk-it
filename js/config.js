@@ -82,15 +82,15 @@ export const ANSWER_GRACE_MS = 1500;
 //    targetCorrect, targetWrong  points for the robbed team (Steal 2)
 // ----------------------------------------------------------------------------
 export const WHEEL = [
-  { id: "doubleornothing", label: "Double or Nothing", emoji: "🎲", weight: 30, color: "#dc2626", ink: "#ffffff",
+  { id: "doubleornothing", label: "Double or Nothing", emoji: "🎲", weight: 34, color: "#dc2626", ink: "#ffffff",
     kind: "question", correct: 2, wrong: -1 },
-  { id: "double", label: "Double", emoji: "⚡", weight: 20, color: "#84cc16", ink: "#1a2e05",
+  { id: "double", label: "Double", emoji: "⚡", weight: 22, color: "#84cc16", ink: "#1a2e05",
     kind: "question", correct: 2, wrong: 0 },
-  { id: "steal", label: "Steal 2", emoji: "🏴‍☠️", weight: 25, color: "#f97316", ink: "#431407",
+  { id: "steal", label: "Steal 2", emoji: "🏴‍☠️", weight: 28, color: "#f97316", ink: "#431407",
     kind: "steal", correct: 2, wrong: 0, targetCorrect: -2, targetWrong: 1 },
-  { id: "drink", label: "Mystery Drink", emoji: "🧪", weight: 20, color: "#facc15", ink: "#422006",
+  { id: "drink", label: "Mystery Drink", emoji: "🧪", weight: 10, color: "#facc15", ink: "#422006",
     kind: "drink", correct: 2, wrong: 0 },
-  { id: "lucky", label: "Lucky Point", emoji: "🍀", weight: 5, color: "#15803d", ink: "#ffffff",
+  { id: "lucky", label: "Lucky Point", emoji: "🍀", weight: 6, color: "#15803d", ink: "#ffffff",
     kind: "lucky", correct: 2 },
 ];
 

@@ -119,11 +119,11 @@ The scoring follows *Risk It - Scoring & Risk Wheel Weights*:
 
 | Wheel | Chance | Right | Wrong or no answer |
 | --- | --- | --- | --- |
-| 🎲 Double or Nothing | 30% | +2 | −1 |
-| 🏴‍☠️ Steal 2 | 25% | +2, target −2 | target +1 |
-| ⚡ Double | 20% | +2 | 0 |
-| 🧪 Mystery Drink | 20% | +2 | 0 |
-| 🍀 Lucky Point | 5% | +2 at once, no question | |
+| 🎲 Double or Nothing | 34% | +2 | −1 |
+| 🏴‍☠️ Steal 2 | 28% | +2, target −2 | target +1 |
+| ⚡ Double | 22% | +2 | 0 |
+| 🧪 Mystery Drink | 10% | +2 | 0 |
+| 🍀 Lucky Point | 6% | +2 at once, no question | |
 
 - **Steal 2:** the team picks any other playing team on its device before
   the question. The target can go to zero or below.
