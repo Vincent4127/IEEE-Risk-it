@@ -188,13 +188,6 @@ const RESULT = {
   },
 };
 
-// Suspense when a team picks Risk it: a dark, swelling chord that rises,
-// with a tremolo on top, about 1.4 seconds.
-function suspense(at) {
-  for (const [f, to] of [[98, 131], [104, 139], [147, 196]]) tone(f, at, 1.4, { type: "sawtooth", gain: 0.06, slide: to });
-  for (let i = 0; i < 12; i++) tone(587, at + 0.2 + i * 0.09, 0.08, { type: "triangle", gain: 0.012 + i * 0.004 });
-}
-
 export const sfx = {
   // The last five seconds of a question; the final second is higher.
   tick: (secs) => tone(secs <= 1 ? 1320 : 990, 0, 0.09, { type: "square", gain: 0.07 }),
@@ -209,13 +202,12 @@ export const sfx = {
     tone(1319, 0.13, 0.28, { type: "triangle", gain: 0.15 });
   },
   round: () => notes([392, 523, 659, 784], 0.13, { type: "triangle", gain: 0.15, length: 0.4 }),
-  // The whole Risk it spin: a suspense swell, the drum roll until the wheel
+  // The whole Risk it spin: the drum roll from the start until the wheel
   // lands `land` seconds from now, then the clip for the result it landed on
   // (`id` from WHEEL) while the result shows, `show` seconds.
   wheel: (land, id, show = 3) => {
     land = Math.max(0.6, land);
-    suspense(0);
-    const rollFrom = Math.min(0.9, land / 2);
+    const rollFrom = 0;
     clip("drumroll", rollFrom, land - rollFrom, { gain: 0.8, loop: true }).then((ok) => {
       if (!ok) for (let t = rollFrom; t < land - 0.03; t += 0.045) noise(t, 0.05, { gain: 0.04 + 0.2 * ((t - rollFrom) / (land - rollFrom)), freq: 1800, q: 0.7 });
     });
