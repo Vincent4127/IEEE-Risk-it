@@ -7,6 +7,7 @@ import {
 } from "./firebase.js";
 import { HOST_EMAIL, TEAMS, ROUNDS, QUESTIONS_PER_TEAM } from "./config.js";
 import { transactLive, logEvent } from "./engine.js";
+import { soundButton, soundPrompt, createMomentSounds, watchTicks } from "./sound.js";
 import * as G from "./game.js";
 import { $, esc, toast, hostLogin, fmtPoints } from "./ui.js";
 import { DIFFICULTY_LABEL, progressText } from "./views.js";
@@ -35,6 +36,11 @@ import { DIFFICULTY_LABEL, progressText } from "./views.js";
 function run(fb) {
   const { db } = fb;
   let live = null;
+  // The same sounds as the Main Display and team screens.
+  soundButton($("#soundBtn"));
+  soundPrompt();
+  const playMoment = createMomentSounds(fb.now);
+  watchTicks(() => live, fb.now);
   let bank = [];
   let used = {};
   let codes = {};
@@ -62,6 +68,7 @@ function run(fb) {
     renderScores();
     renderCodes();
     renderBank();
+    playMoment(live);
   });
   onValue(ref(db, "secret/questions"), (s) => { bank = Object.values(s.val() || {}); renderBank(); renderGame(); });
   onValue(ref(db, "secret/used"), (s) => { used = s.val() || {}; renderBank(); });

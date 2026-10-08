@@ -5,7 +5,7 @@
 // Each slot keeps its own login.
 
 import { connect, ref, onValue, get, set, serverTimestamp } from "./firebase.js";
-import { ROUNDS, TEAMS, WHEEL, DURATIONS } from "./config.js";
+import { ROUNDS, TEAMS } from "./config.js";
 import { teamName, ranking, roundCfg, questionNumber, initials, playersOf, turnsPerRound } from "./game.js";
 import { $, esc, toast, createLeaderboard, startCountdown, standings } from "./ui.js";
 import {
@@ -14,7 +14,7 @@ import {
   tieIntro, resultPopHTML, showResultPop,
 } from "./views.js";
 import { wheelSVG, spin } from "./wheel.js";
-import { sfx, soundButton } from "./sound.js";
+import { sfx, soundButton, createMomentSounds } from "./sound.js";
 
 const slot = new URLSearchParams(location.search).get("slot") || "1";
 const STORE = `riskit.team.${slot}`;
@@ -118,6 +118,7 @@ function codeForm(fb, user, onJoined) {
 
 function play(fb, team) {
   soundButton($("#soundBtn"));
+  const playMoment = createMomentSounds(fb.now);
   const renderBoard = createLeaderboard($("#leaderboard"), { me: team });
   $("#side").classList.remove("hidden");
   let live = null;
@@ -207,7 +208,7 @@ function play(fb, team) {
     stopTimer = () => {};
     stage.innerHTML = mine ? myTurn() : waiting();
     wire();
-    if (mine) playFor();
+    playMoment(live);
   }
 
   // This team's place among the teams on the board, or null when it isn't
@@ -218,24 +219,7 @@ function play(fb, team) {
     return row ? { place: row.place, of: board.length, medal: row.medal } : null;
   }
 
-  // Sounds for this team's own turn only, so a room of devices stays quiet.
-  let lastSound = "";
-  function playFor() {
-    const moment = [live.phase, live.turnId, live.result?.outcome].join("|");
-    if (moment === lastSound || live.status === "paused") return;
-    const first = lastSound === "";
-    lastSound = moment;
-    if (first && live.phase !== "ready") return;
-    switch (live.phase) {
-      case "ready": return sfx.turn();
-      case "question": if (live.mode === "allin") sfx.cash(); return;
-      case "spinning": {
-        const land = ((live.wheel?.landsAt ?? (live.phaseEndsAt ?? 0) - 400) - fb.now()) / 1000;
-        return sfx.wheel(land, WHEEL[live.wheel?.segment]?.id, DURATIONS.result);
-      }
-      case "reveal": return ({ correct: sfx.correct, lucky: sfx.correct, wrong: sfx.wrong, timeout: sfx.timeout })[live.result?.outcome]?.();
-    }
-  }
+
 
   function waiting() {
     const rank = myPlace()?.place ?? 0;
@@ -467,11 +451,11 @@ function play(fb, team) {
         (live.question?.seconds ?? 30) * 1000,
         fb.now,
         () => (live.status === "paused" ? live.pausedRemaining ?? 0 : null),
-        (secs) => { if (live.activeTeam === team && live.phase === "question" && secs > 0 && secs <= 5) sfx.tick(secs); },
+        (secs) => { if (live.phase === "question" && secs > 0 && secs <= 5) sfx.tick(secs); },
       );
     }
     const wheel = stage.querySelector(".wheel");
-    if (wheel && live.wheel) spin(wheel, live.wheel.segment, live.wheel.spinId, live.wheel.landsAt ?? (live.phaseEndsAt ?? 0) - 400, fb.now(), () => showResultPop(stage));
+    if (wheel && live.wheel) spin(wheel, live.wheel.segment, live.wheel.spinId, live.wheel.landsAt ?? (live.phaseEndsAt ?? 0) - 400, fb.now(), () => showResultPop(stage, (live.phaseEndsAt ?? 0) - fb.now()));
   }
 }
 

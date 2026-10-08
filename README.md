@@ -142,7 +142,7 @@ The points, chances and timers are all in `js/config.js`.
 Mystery Drink (potion), Lucky Point and the All In cash register. To change
 one, replace the file with another of the same name. Steal 2, Double and the
 Risk it suspense are made in the browser. When the wheel lands, its result
-shows in the middle of every screen for `DURATIONS.result` seconds (3)
+shows in the middle of every screen for `DURATIONS.result` seconds (5)
 before the next step.
 
 ## Putting it online (optional)

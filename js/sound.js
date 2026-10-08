@@ -1,3 +1,5 @@
+import { WHEEL, DURATIONS } from "./config.js";
+
 // Game-show sounds, made in the browser with Web Audio (no sound files to
 // download). Browsers only allow sound after someone clicks or taps the
 // page, so the first click anywhere switches sound on. The mute choice is
@@ -234,6 +236,45 @@ export const sfx = {
     notes([1047, 1047, 1319, 1568], 0.12, { type: "triangle", gain: 0.17, length: 0.5 });
   },
 };
+
+// One sound for each new moment of the game, the same on every screen (Main
+// Display, team devices, Admin Panel). Nothing plays for the moment a page
+// opens on, only for the ones that follow. `now` is the server clock.
+export function createMomentSounds(now) {
+  let last = null;
+  return function play(live) {
+    if (!live) return;
+    const moment = [live.phase, live.turnId, live.round, live.tiebreak?.cycle, live.result?.outcome].join("|");
+    if (last === null || live.status === "paused") { last = moment; return; }
+    if (moment === last) return;
+    last = moment;
+    switch (live.phase) {
+      case "roundIntro": return sfx.round();
+      case "ready": case "target": case "drink": return sfx.turn();
+      // All In: the question appears with a cash register.
+      case "question": if (live.mode === "allin") sfx.cash(); return;
+      case "spinning": {
+        const land = ((live.wheel?.landsAt ?? (live.phaseEndsAt ?? 0) - 400) - now()) / 1000;
+        return sfx.wheel(land, WHEEL[live.wheel?.segment]?.id, DURATIONS.result);
+      }
+      case "reveal": return ({ correct: sfx.correct, lucky: sfx.correct, wrong: sfx.wrong, timeout: sfx.timeout })[live.result?.outcome]?.();
+      case "finished": return sfx.win();
+    }
+  };
+}
+
+// The last five seconds of a question tick, for a page with no timer on
+// screen (the Admin Panel). Pages with a timer tick from it instead.
+export function watchTicks(getLive, now) {
+  let last = null;
+  setInterval(() => {
+    const live = getLive();
+    if (!live || live.status !== "running" || live.phase !== "question" || !live.phaseEndsAt) { last = null; return; }
+    const secs = Math.ceil((live.phaseEndsAt - now()) / 1000);
+    if (secs !== last && secs > 0 && secs <= 5) sfx.tick(secs);
+    last = secs;
+  }, 150);
+}
 
 // A mute button: shows "Sound on", "Muted", or "Tap for sound" while the
 // browser is still blocking audio.

@@ -1,7 +1,7 @@
 // Main Display (projector). Shows the game and runs the engine.
 
 import { connect, ref, onValue, set } from "./firebase.js";
-import { HOST_EMAIL, TEAMS, ROUNDS, QUESTIONS_PER_TEAM, WHEEL, DURATIONS } from "./config.js";
+import { HOST_EMAIL, TEAMS, ROUNDS, QUESTIONS_PER_TEAM } from "./config.js";
 import { Engine } from "./engine.js";
 import { teamName, initials, questionNumber, turnsPerRound, playersOf } from "./game.js";
 import { $, esc, toast, createLeaderboard, startCountdown, hostLogin } from "./ui.js";
@@ -11,7 +11,7 @@ import {
   choiceQuestion, tieIntro, resultPopHTML, showResultPop,
 } from "./views.js";
 import { wheelSVG, spin } from "./wheel.js";
-import { sfx, soundButton, soundPrompt } from "./sound.js";
+import { sfx, soundButton, soundPrompt, createMomentSounds } from "./sound.js";
 
 const QR_LIB = "https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/+esm";
 // The address teams open: the team page next to this one.
@@ -66,6 +66,7 @@ function run(fb) {
 
   soundButton($("#soundBtn"));
   soundPrompt();
+  const playMoment = createMomentSounds(fb.now);
   fullscreenButton($("#fullBtn"));
 
   const renderBoard = createLeaderboard($("#leaderboard"));
@@ -73,7 +74,6 @@ function run(fb) {
   let claims = {};
   let viewKey = "";
   let stopTimer = () => {};
-  let firstView = true;
 
   let roster = null;
   let rosterBlocked = false;
@@ -116,30 +116,10 @@ function run(fb) {
     stopTimer = () => {};
     stage.innerHTML = view();
     after();
-    playFor(firstView);
-    firstView = false;
+    playMoment(live);
   }
 
-  // One sound per new moment of the game (not when the page first opens).
-  let lastSound = "";
-  function playFor(first) {
-    const moment = [live.phase, live.turnId, live.round, live.result?.outcome].join("|");
-    if (first || moment === lastSound || live.status === "paused") { lastSound = moment; return; }
-    lastSound = moment;
-    switch (live.phase) {
-      case "roundIntro": return sfx.round();
-      case "ready": return sfx.turn();
-      // All In: the question appears with a cash register.
-      case "question": if (live.mode === "allin") sfx.cash(); return;
-      case "spinning": {
-        const land = ((live.wheel?.landsAt ?? (live.phaseEndsAt ?? 0) - 400) - fb.now()) / 1000;
-        return sfx.wheel(land, WHEEL[live.wheel?.segment]?.id, DURATIONS.result);
-      }
-      case "target": case "drink": return sfx.turn();
-      case "reveal": return ({ correct: sfx.correct, lucky: sfx.correct, wrong: sfx.wrong, timeout: sfx.timeout })[live.result?.outcome]?.();
-      case "finished": return sfx.win();
-    }
-  }
+
 
   function renderMeta() {
     if (live.status === "lobby" || live.status === "finished") {
@@ -321,7 +301,7 @@ function run(fb) {
     if (qr) drawQR(qr);
     const wheel = stage.querySelector(".wheel");
     if (wheel && live.wheel) {
-      spin(wheel, live.wheel.segment, live.wheel.spinId, live.wheel.landsAt ?? (live.phaseEndsAt ?? 0) - 400, fb.now(), () => showResultPop(stage));
+      spin(wheel, live.wheel.segment, live.wheel.spinId, live.wheel.landsAt ?? (live.phaseEndsAt ?? 0) - 400, fb.now(), () => showResultPop(stage, (live.phaseEndsAt ?? 0) - fb.now()));
     }
   }
 

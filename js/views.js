@@ -187,7 +187,14 @@ export function resultPopHTML(live) {
       </div>
     </div>`;
 }
-export const showResultPop = (root) => root.querySelector("[data-result-pop]")?.classList.add("is-shown");
+// `leaveIn`: ms until it should be gone; it shrinks and fades out over the
+// last 0.6 s of that.
+export function showResultPop(root, leaveIn) {
+  const el = root.querySelector("[data-result-pop]");
+  if (!el) return;
+  el.classList.add("is-shown");
+  setTimeout(() => el.classList.add("is-leaving"), Math.max(0, leaveIn - 600));
+}
 
 export function wheelResultLabel(live) {
   const seg = live.wheel ? WHEEL[live.wheel.segment] : null;

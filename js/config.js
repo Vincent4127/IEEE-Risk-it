@@ -53,7 +53,7 @@ export const TIMERS = {
 export const DURATIONS = {
   roundIntro: 6, // "Round 2" title card before the first turn of a round
   spin: 6,       // wheel spin on the Main Display
-  result: 3,     // the wheel's result, big on every screen, before the question
+  result: 5,     // the wheel's result, big on every screen, before the question
   reveal: 7,     // answer reveal before the next team's turn
 };
 

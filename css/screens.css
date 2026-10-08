@@ -1321,6 +1321,9 @@ button.choice { font: inherit; }
   transition: transform 450ms cubic-bezier(.2, 1.4, .4, 1);
 }
 .result-pop.is-shown .result-pop__card { transform: none; }
+/* Leaving: the card shrinks and rises as everything fades. */
+.result-pop.is-leaving { opacity: 0; transition: opacity 550ms ease-in; }
+.result-pop.is-leaving .result-pop__card { transform: translateY(-24px) scale(.82); transition: transform 550ms cubic-bezier(.5, 0, .75, 0); }
 .result-pop__emoji {
   font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
   font-size: clamp(80px, 11vw, 170px);
